@@ -1,4 +1,4 @@
-aiohttp==0.18.4
+aiohttp==0.22.5
 chardet==2.3.0
 furl==0.4.2
 humanfriendly==2.1
