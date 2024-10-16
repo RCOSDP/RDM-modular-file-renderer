@@ -1,4 +1,4 @@
-FROM python:3.5-slim-buster
+FROM python:3.12-slim-bookworm
 
 # ensure unoconv can locate the uno library
 ENV PYTHONPATH /usr/lib/python3/dist-packages
@@ -26,6 +26,7 @@ RUN usermod -d /home www-data \
         libtiff5-dev \
         libxml2-dev \
         libxslt1-dev \
+	python-dev-is-python3 \
         zlib1g-dev \
         # convert .step to jsc3d-compatible format
         freecad \
@@ -58,7 +59,6 @@ RUN usermod -d /home www-data \
         gnupg2 \
     && rm -rf /var/lib/apt/lists/* \
     && pip install -U pip \
-    && pip install setuptools==37.0.0 \
     && mkdir -p /code \
     && pip install unoconv==0.8.2
 

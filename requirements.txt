@@ -5,7 +5,7 @@ humanfriendly==2.1
 invoke==0.13.0
 mako==1.0.1
 raven==5.27.0
-setuptools==37.0.0
+setuptools
 stevedore==1.2.0
 tornado==4.3
 
@@ -36,7 +36,7 @@ jinja2==2.10.1
 mistune==0.8.1
 
 # Pdf
-reportlab==3.4.0
+reportlab
 
 # Pptx
 # python-pptx==0.5.7
@@ -45,10 +45,10 @@ reportlab==3.4.0
 docutils==0.12
 
 # Tabular
-pandas==0.25.1
+pandas
 xlrd==1.0.0
-h5py==2.7.0
-scipy==0.19.1
+h5py
+scipy
 
 # Md
 markdown==2.6.2
