@@ -3,7 +3,9 @@ FROM python:3.5-slim-buster
 # ensure unoconv can locate the uno library
 ENV PYTHONPATH /usr/lib/python3/dist-packages
 
-RUN usermod -d /home www-data \
+RUN echo "deb https://archive.debian.org/debian buster main" > /etc/apt/sources.list \
+    && echo "deb https://archive.debian.org/debian-security buster/updates main" >> /etc/apt/sources.list \
+    && usermod -d /home www-data \
     && chown www-data:www-data /home \
     # -slim images strip man dirs, but java won't install unless this dir exists.
     && mkdir -p /usr/share/man/man1 \
