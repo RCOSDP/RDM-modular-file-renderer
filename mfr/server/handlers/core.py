@@ -16,6 +16,8 @@ import waterbutler.core.exceptions
 from mfr.server import settings
 from mfr.core.metrics import MetricsRecord
 from mfr.core import utils, exceptions, remote_logging
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.core.models import http
 
 CORS_ACCEPT_HEADERS = [
     'Range',
@@ -75,6 +77,31 @@ class CorsMixin:
         if self.request.headers.get('Origin'):
             self.set_header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE'),
 
+class XrayStaticFileHandler(tornado.web.StaticFileHandler):
+    def prepare(self):
+        self.segment = xray_recorder.begin_segment('mfr')
+        self.segment.put_http_meta(http.URL, self.request.full_url())
+        self.segment.put_http_meta(http.METHOD, self.request.method)
+        super().prepare()
+
+    def on_finish(self):
+        if hasattr(self, 'segment'):
+            self.segment.put_http_meta(http.STATUS, self.get_status())
+            xray_recorder.end_segment()
+        super().on_finish()
+
+class XrayHandler(tornado.web.RequestHandler):
+    def prepare(self):
+        self.segment = xray_recorder.begin_segment('mfr')
+        self.segment.put_http_meta(http.URL, self.request.full_url())
+        self.segment.put_http_meta(http.METHOD, self.request.method)
+        super().prepare()
+
+    def on_finish(self):
+        if hasattr(self, 'segment'):
+            self.segment.put_http_meta(http.STATUS, self.get_status())
+            xray_recorder.end_segment()
+        super().on_finish()
 
 class BaseHandler(CorsMixin, tornado.web.RequestHandler, SentryMixin):
     """Base class for the Render and Export handlers.  Fetches the file metadata for the file
@@ -102,6 +129,9 @@ class BaseHandler(CorsMixin, tornado.web.RequestHandler, SentryMixin):
         """Builds an MFR provider instance, to which it passes the the ``url`` query parameter.
         From that, the file metadata is extracted.  Also builds cached waterbutler providers.
         """
+        self.segment = xray_recorder.begin_segment('mfr')
+        self.segment.put_http_meta(http.URL, self.request.full_url())
+        self.segment.put_http_meta(http.METHOD, self.request.method)
         if self.request.method == 'OPTIONS':
             return
 
@@ -215,6 +245,10 @@ class BaseHandler(CorsMixin, tornado.web.RequestHandler, SentryMixin):
                                       exc_info=(typ, value, tb))
 
     def on_finish(self):
+        if hasattr(self, 'segment'):
+            self.segment.put_http_meta(http.STATUS, self.get_status())
+            xray_recorder.end_segment()
+
         if self.request.method not in self.ALLOWED_METHODS:
             return
 
@@ -277,7 +311,7 @@ class BaseHandler(CorsMixin, tornado.web.RequestHandler, SentryMixin):
         return metrics
 
 
-class ExtensionsStaticFileHandler(tornado.web.StaticFileHandler, CorsMixin):
+class ExtensionsStaticFileHandler(XrayStaticFileHandler, CorsMixin):
     """Extensions static path definitions
     """
 
@@ -290,14 +324,16 @@ class ExtensionsStaticFileHandler(tornado.web.StaticFileHandler, CorsMixin):
         }
 
     async def get(self, module_name, path):
-        try:
-            super().initialize(self.modules[module_name])
-            return await super().get(path)
-        except Exception:
-            self.set_status(404)
+        with xray_recorder.in_segment('get_module'):
+            try:
+                super().initialize(self.modules[module_name])
+                return await super().get(path)
+            except Exception:
+                self.set_status(404)
 
-        try:
-            super().initialize(settings.STATIC_PATH)
-            return await super().get(path)
-        except Exception:
-            self.set_status(404)
+        with xray_recorder.in_segment('get_static'):
+            try:
+                super().initialize(settings.STATIC_PATH)
+                return await super().get(path)
+            except Exception:
+                self.set_status(404)

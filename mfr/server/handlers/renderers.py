@@ -1,8 +1,9 @@
 import pkg_resources
 import tornado.web
+from mfr.server.handlers import core
 
 
-class RenderersHandler(tornado.web.RequestHandler):
+class RenderersHandler(core.XrayHandler):
 
     def get(self):
         """List available renderers"""

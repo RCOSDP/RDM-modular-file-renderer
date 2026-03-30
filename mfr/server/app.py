@@ -1,14 +1,3 @@
-import time
-import signal
-import asyncio
-import logging
-from functools import partial
-
-import tornado.web
-import tornado.httpserver
-import tornado.platform.asyncio
-from raven.contrib.tornado import AsyncSentryClient
-
 from mfr import settings
 from mfr.server import settings as server_settings
 from mfr.server.handlers.export import ExportHandler
@@ -17,7 +6,11 @@ from mfr.server.handlers.status import StatusHandler
 from mfr.server.handlers.exporters import ExportersHandler
 from mfr.server.handlers.renderers import RenderersHandler
 from mfr.server.handlers.core import ExtensionsStaticFileHandler
+from mfr.server.handlers.core import XrayStaticFileHandler
 from mfr.version import __version__
+
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.core import patch_all
 
 logger = logging.getLogger(__name__)
 access_logger = logging.getLogger('tornado.access')
@@ -46,9 +39,18 @@ def almost_apache_style_log(handler):
 
 
 def make_app(debug):
+    xray_recorder.configure(
+        service='mfr',
+        daemon_address='192.168.168.167:2000',
+        sampling=False,
+        context_missing='LOG_ERROR',
+        plugins=('EC2Plugin',),
+        dynamic_naming='*.perfin.rdm.nii.ac.jp',
+    )
+    patch_all()
     app = tornado.web.Application(
         [
-            (r'/static/(.*)', tornado.web.StaticFileHandler, {'path': server_settings.STATIC_PATH}),
+            (r'/static/(.*)', XrayStaticFileHandler, {'path': server_settings.STATIC_PATH}),
             (r'/assets/(.*?)/(.*\..*)', ExtensionsStaticFileHandler),
             (r'/export', ExportHandler),
             (r'/exporters', ExportersHandler),

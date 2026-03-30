@@ -1,8 +1,9 @@
 import pkg_resources
 import tornado.web
+from mfr.server.handlers import core
 
 
-class ExportersHandler(tornado.web.RequestHandler):
+class ExportersHandler(core.XrayHandler):
 
     def get(self):
         """List available exporters"""

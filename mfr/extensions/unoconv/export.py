@@ -9,29 +9,33 @@ from mfr.extensions.unoconv.settings import (PORT,
                                              UNOCONV_BIN,
                                              UNOCONV_TIMEOUT)
 
+from aws_xray_sdk.core import xray_recorder
 
 class UnoconvExporter(BaseExporter):
 
     def export(self):
-        try:
-            run([
-                UNOCONV_BIN,
-                '-n',
-                '-c', 'socket,host={},port={};urp;StarOffice.ComponentContext'.format(ADDRESS, PORT),
-                '-f', self.format,
-                '-o', self.output_file_path,
-                '-vvv',
-                self.source_file_path
-            ], check=True, timeout=UNOCONV_TIMEOUT)
-        except CalledProcessError as err:
-            name, extension = splitext(basename(self.source_file_path))
-            raise SubprocessError(
-                'Unable to export the file in the requested format, please try again later.',
-                process='unoconv',
-                cmd=str(err.cmd),
-                returncode=err.returncode,
-                path=str(self.source_file_path),
-                code=HTTPStatus.BAD_REQUEST,
-                extension=extension or '',
-                exporter_class='unoconv',
-            )
+        xray_recorder.begin_segment('UNOCONV')
+        with xray_recorder.in_subsegment(f'{ADDRESS}:{PORT}'):
+            try:
+                run([
+                    UNOCONV_BIN,
+                    '-n',
+                    '-c', 'socket,host={},port={};urp;StarOffice.ComponentContext'.format(ADDRESS, PORT),
+                    '-f', self.format,
+                    '-o', self.output_file_path,
+                    '-vvv',
+                    self.source_file_path
+                ], check=True, timeout=UNOCONV_TIMEOUT)
+            except CalledProcessError as err:
+                name, extension = splitext(basename(self.source_file_path))
+                raise SubprocessError(
+                    'Unable to export the file in the requested format, please try again later.',
+                    process='unoconv',
+                    cmd=str(err.cmd),
+                    returncode=err.returncode,
+                    path=str(self.source_file_path),
+                    code=HTTPStatus.BAD_REQUEST,
+                    extension=extension or '',
+                    exporter_class='unoconv',
+                )
+        xray_recorder.end_segment()

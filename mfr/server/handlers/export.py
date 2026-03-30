@@ -8,6 +8,7 @@ import waterbutler.core.streams
 from mfr.core import utils
 from mfr.server import settings
 from mfr.server.handlers import core
+from aws_xray_sdk.core import xray_recorder
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class ExportHandler(core.BaseHandler):
     ALLOWED_METHODS = ['GET']
 
     async def prepare(self):
+        xray_recorder.begin_segment('mfr')
         if self.request.method not in self.ALLOWED_METHODS:
             return
 
@@ -57,49 +59,53 @@ class ExportHandler(core.BaseHandler):
 
     async def get(self):
         """Export a file to the format specified via the associated extension library"""
+        with xray_recorder.in_subsegment('Export File'):
+            # File is already in the requested format
+            if self.metadata.ext.lower() == ".{}".format(self.format.lower()):
+                await self.write_stream(await self.provider.download())
+                logger.info('Exported {} with no conversion.'.format(self.format))
+                self.metrics.add('export.conversion', 'noop')
+                return
 
-        # File is already in the requested format
-        if self.metadata.ext.lower() == ".{}".format(self.format.lower()):
-            await self.write_stream(await self.provider.download())
-            logger.info('Exported {} with no conversion.'.format(self.format))
-            self.metrics.add('export.conversion', 'noop')
-            return
+        with xray_recorder.in_subsegment('Cache Check'):
+            if settings.CACHE_ENABLED:
+                try:
+                    cached_stream = await self.cache_provider.download(self.cache_file_path)
+                except DownloadError as e:
+                    assert e.code == 404, 'Non-404 DownloadError {!r}'.format(e)
+                    logger.info('No cached file found; Starting export [{}]'.format(self.cache_file_path))
+                    self.metrics.add('cache_file.result', 'miss')
+                else:
+                    logger.info('Cached file found; Sending downstream [{}]'.format(self.cache_file_path))
+                    self.metrics.add('cache_file.result', 'hit')
+                    self._set_headers()
+                    return await self.write_stream(cached_stream)
 
-        if settings.CACHE_ENABLED:
-            try:
-                cached_stream = await self.cache_provider.download(self.cache_file_path)
-            except DownloadError as e:
-                assert e.code == 404, 'Non-404 DownloadError {!r}'.format(e)
-                logger.info('No cached file found; Starting export [{}]'.format(self.cache_file_path))
-                self.metrics.add('cache_file.result', 'miss')
-            else:
-                logger.info('Cached file found; Sending downstream [{}]'.format(self.cache_file_path))
-                self.metrics.add('cache_file.result', 'hit')
+        with xray_recorder.in_subsegment('Upload File'):
+            await self.local_cache_provider.upload(
+                await self.provider.download(),
+                self.source_file_path
+            )
+
+        with xray_recorder.in_subsegment('Exporter Function'):
+            exporter = utils.make_exporter(
+                self.metadata.ext,
+                self.source_file_path.full_path,
+                self.output_file_path.full_path,
+                self.format,
+                self.metadata,
+            )
+
+            self.extension_metrics.add('class', exporter._get_module_name())
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, exporter.export)
+            self.exporter_metrics = exporter.exporter_metrics
+
+        with xray_recorder.in_subsegment('Write Stream'):
+            with open(self.output_file_path.full_path, 'rb') as fp:
                 self._set_headers()
-                return await self.write_stream(cached_stream)
-
-        await self.local_cache_provider.upload(
-            await self.provider.download(),
-            self.source_file_path
-        )
-
-        exporter = utils.make_exporter(
-            self.metadata.ext,
-            self.source_file_path.full_path,
-            self.output_file_path.full_path,
-            self.format,
-            self.metadata,
-        )
-
-        self.extension_metrics.add('class', exporter._get_module_name())
-
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, exporter.export)
-        self.exporter_metrics = exporter.exporter_metrics
-
-        with open(self.output_file_path.full_path, 'rb') as fp:
-            self._set_headers()
-            await self.write_stream(waterbutler.core.streams.FileStreamReader(fp))
+                await self.write_stream(waterbutler.core.streams.FileStreamReader(fp))
 
     async def _cache_and_clean(self):
         if settings.CACHE_ENABLED and os.path.exists(self.output_file_path.full_path):
@@ -121,3 +127,6 @@ class ExportHandler(core.BaseHandler):
         self.set_header('Content-Disposition', 'attachment;filename="{}"'.format('{}.{}'.format(self.metadata.name.replace('"', '\\"'), self.format)))
         if self.metadata.content_type:
             self.set_header('Content-Type', self.metadata.content_type)
+
+    def on_finish(self):
+        xray_recorder.end_segment()

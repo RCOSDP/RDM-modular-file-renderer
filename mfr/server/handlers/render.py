@@ -8,6 +8,7 @@ import waterbutler.core.exceptions
 from mfr.server import settings
 from mfr.core import utils as utils
 from mfr.server.handlers import core
+from aws_xray_sdk.core import xray_recorder
 
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,7 @@ class RenderHandler(core.BaseHandler):
     ALLOWED_METHODS = ['GET']
 
     async def prepare(self):
+        xray_recorder.begin_segment('mfr')
         if self.request.method not in self.ALLOWED_METHODS:
             return
 
@@ -39,17 +41,18 @@ class RenderHandler(core.BaseHandler):
         )
 
     async def get(self):
-        """Return HTML that will display the given file."""
-        renderer = utils.make_renderer(
-            self.metadata.ext,
-            self.metadata,
-            self.source_file_path.full_path,
-            self.url,
-            '{}://{}/assets'.format(self.request.protocol, self.request.host),
-            self.request.uri.replace('/render?', '/export?', 1)
-        )
+        with xray_recorder.in_subsegment('Create Renderer'):
+            """Return HTML that will display the given file."""
+            renderer = utils.make_renderer(
+                self.metadata.ext,
+                self.metadata,
+                self.source_file_path.full_path,
+                self.url,
+                '{}://{}/assets'.format(self.request.protocol, self.request.host),
+                self.request.uri.replace('/render?', '/export?', 1)
+            )
 
-        self.extension_metrics.add('class', renderer._get_module_name())
+            self.extension_metrics.add('class', renderer._get_module_name())
 
         if renderer.cache_result and settings.CACHE_ENABLED:
             try:
@@ -72,8 +75,9 @@ class RenderHandler(core.BaseHandler):
             self.metrics.add('source_file.upload.required', False)
 
         loop = asyncio.get_event_loop()
-        rendition = await loop.run_in_executor(None, renderer.render)
-        self.renderer_metrics = renderer.renderer_metrics
+        with xray_recorder.in_subsegment('Render'):
+            rendition = await loop.run_in_executor(None, renderer.render)
+            self.renderer_metrics = renderer.renderer_metrics
 
         # Spin off upload into non-blocking operation
         if renderer.cache_result and settings.CACHE_ENABLED:
@@ -84,7 +88,8 @@ class RenderHandler(core.BaseHandler):
                 )
             )
 
-        await self.write_stream(waterbutler.core.streams.StringStream(rendition))
+        with xray_recorder.in_subsegment('Write to Response'):
+            await self.write_stream(waterbutler.core.streams.StringStream(rendition))
 
     async def _cache_and_clean(self):
         if hasattr(self, 'source_file_path'):
@@ -92,3 +97,6 @@ class RenderHandler(core.BaseHandler):
                 os.remove(self.source_file_path.full_path)
             except FileNotFoundError:
                 pass
+
+    def on_finish(self):
+        xray_recorder.end_segment()

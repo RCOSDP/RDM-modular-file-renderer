@@ -1,9 +1,8 @@
-import tornado.web
-
+from mfr.server.handlers import core
 from mfr.version import __version__
 
 
-class StatusHandler(tornado.web.RequestHandler):
+class StatusHandler(core.XrayHandler):
 
     def get(self):
         """List information about modular-file-renderer status"""
