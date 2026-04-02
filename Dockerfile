@@ -41,7 +41,8 @@ RUN echo "deb https://archive.debian.org/debian buster main" > /etc/apt/sources.
     # gosu
     && export GOSU_VERSION='1.10' \
     && mkdir ~/.gnupg && chmod 600 ~/.gnupg && echo "disable-ipv6" >> ~/.gnupg/dirmngr.conf \
-    && for server in hkp://ipv4.pool.sks-keyservers.net:80 \
+    && for server in hkps://keys.openpgp.org \
+                     hkp://ipv4.pool.sks-keyservers.net:80 \
                      hkp://ha.pool.sks-keyservers.net:80 \
                      hkp://pgp.mit.edu:80 \
                      hkp://keyserver.pgp.com:80 \
