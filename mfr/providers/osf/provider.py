@@ -34,6 +34,7 @@ class OsfProvider(provider.BaseProvider):
         super().__init__(request, url, action)
         self.download_url = None
         self.headers = {}
+        self._cached_metadata = None
 
         # capture request authorization
         self.cookies = dict(self.request.cookies)
@@ -60,7 +61,10 @@ class OsfProvider(provider.BaseProvider):
         """
         download_url = await self._fetch_download_url()
         logger.debug('download_url::{}'.format(download_url))
-        if '/file?' in download_url:
+        if self._cached_metadata:
+            metadata = self._cached_metadata
+            self.metrics.add('metadata.wb_api', 'cached_from_head')
+        elif '/file?' in download_url:
             # URL is for WaterButler v0 API
             # TODO Remove this when API v0 is officially deprecated
             self.metrics.add('metadata.wb_api', 'v0')
@@ -171,7 +175,7 @@ class OsfProvider(provider.BaseProvider):
                 self.metrics.add('download_url.orig_type', 'osf')
                 # make request to osf, don't follow, store waterbutler download url
                 request = await self._make_request(
-                    'GET',
+                    'HEAD',
                     self.url,
                     allow_redirects=False,
                     headers={
@@ -189,6 +193,7 @@ class OsfProvider(provider.BaseProvider):
                         code=request.status,
                     )
                 self.download_url = request.headers['location']
+                self._cached_metadata = {'data': json.loads(request.headers['x-file-metadata'])}
 
             self.metrics.add('download_url.derived_url', str(self.download_url))
 
