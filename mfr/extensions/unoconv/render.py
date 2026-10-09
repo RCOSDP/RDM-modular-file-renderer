@@ -78,5 +78,7 @@ class UnoconvRenderer(extension.BaseRenderer):
     def cache_result(self):
         return self.renderer.cache_result
 
+    @property
     def use_celery(self) -> bool:
+        # Office documents are always rendered through a Celery worker, as upstream does.
         return True

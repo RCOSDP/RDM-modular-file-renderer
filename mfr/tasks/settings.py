@@ -34,6 +34,12 @@ task_acks_late = True
 worker_hijack_root_logger = False
 task_eager_propagates = True
 
+# Workers exchange remote control messages (including the hello/reply done at startup) on a
+# broadcast exchange shared by every Celery application on the broker. Other applications on
+# the same broker may serialize those messages with pickle, which this JSON-only worker rejects,
+# so keep MFR's control traffic on an exchange of its own.
+control_exchange = config.get('CELERY_CONTROL_EXCHANGE', 'mfr')
+
 imports = [
     "mfr.tasks.export",
     "mfr.tasks.render",

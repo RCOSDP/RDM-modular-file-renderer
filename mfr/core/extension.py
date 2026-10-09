@@ -1,6 +1,5 @@
 import abc
 import asyncio
-import time
 from dataclasses import dataclass, field
 
 from waterbutler.core.streams import StringStream
@@ -116,9 +115,11 @@ class BaseRenderer(metaclass=abc.ABCMeta):
         else:
             from mfr.tasks.render import render
             result = render.delay(self)
+            # Poll without blocking the event loop so other requests keep being served while
+            # the worker renders; give up after ten minutes and let the handler answer 202.
             for i in range(100 * 60 * 10):
                 if not result.ready():
-                    time.sleep(0.01)
+                    await asyncio.sleep(0.01)
                 else:
                     return await self.cache_provider.download(self.cache_file_path)
 
