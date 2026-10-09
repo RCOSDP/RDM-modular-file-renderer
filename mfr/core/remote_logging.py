@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 async def log_analytics(request, metrics, is_error=False):
     """Send events to Keen describing the action that occurred."""
-    if not settings.KEEN_ENABLE_LOGGING:
+    if not settings.KEEN_ENABLE_LOGGING or settings.KEEN_PRIVATE_PROJECT_ID is None:
         return
 
     keen_payload = copy.deepcopy(metrics)

@@ -4,7 +4,7 @@ import logging
 import mimetypes
 from urllib.parse import urlparse
 
-import aiohttp
+from aiohttp import ClientSession
 
 from waterbutler.core import streams
 
@@ -29,15 +29,17 @@ class HttpProvider(provider.BaseProvider):
         return provider.ProviderMetadata(name, ext, content_type, unique_key, self.url)
 
     async def download(self):
-        async with aiohttp.request('GET', self.url) as response:
-            if response.status >= 400:
-                err_resp = await response.read()
-                logger.error('Unable to download file: ({}) {}'.format(response.status, err_resp.decode('utf-8')))
-                raise exceptions.DownloadError(
-                    'Unable to download the requested file, please try again later.',
-                    download_url=self.url,
-                    response=await response.text(),
-                    code=response.status,
-                    provider='http',
-                )
-            return streams.ResponseStreamReader(response)
+        # The response is kept open on purpose, the returned stream reads from it.
+        response = await ClientSession().get(self.url)
+        if response.status >= 400:
+            err_resp = await response.text()
+            await response.release()
+            logger.error(f'Unable to download file: ({response.status}) {err_resp}')
+            raise exceptions.DownloadError(
+                'Unable to download the requested file, please try again later.',
+                download_url=self.url,
+                response=err_resp,
+                code=response.status,
+                provider='http',
+            )
+        return streams.ResponseStreamReader(response)
