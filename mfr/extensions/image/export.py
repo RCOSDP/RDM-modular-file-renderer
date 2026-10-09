@@ -33,7 +33,7 @@ class ImageExporter(extension.BaseExporter):
                 # and about colors being possibly wrong
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    image = PSDImage.load(self.source_file_path).as_PIL()
+                    image = PSDImage.open(self.source_file_path).composite()
             else:
                 image = Image.open(self.source_file_path)
 

@@ -1,8 +1,6 @@
 import pytest
 from importlib.metadata import entry_points
 
-from skimage._shared.testing import parametrize
-
 from mfr.core import utils as mfr_utils
 from mfr.core.utils import fix_name
 
@@ -39,7 +37,7 @@ class TestGetExporterName:
     def test_get_exporter_name_no_entry_point(self):
         assert mfr_utils.get_exporter_name('.jpg') == ''  # extensions must begin with a period
 
-@parametrize(
+@pytest.mark.parametrize(
     "inp, out",
     [
         ["jpg", "jpg"],
