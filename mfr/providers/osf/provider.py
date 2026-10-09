@@ -7,7 +7,6 @@ from urllib.parse import urlparse
 import mimetypes
 
 import furl
-import aiohttp
 from aiohttp import ClientSession
 
 from waterbutler.core import streams
@@ -153,10 +152,13 @@ class OsfProvider(provider.BaseProvider):
 
         self.metrics.add('download.saw_redirect', False)
         if response.status in (302, 301):
+            location = response.headers['location']
             await response.release()
-            async with aiohttp.request('GET', self.url) as response:
-                self.metrics.add('download.saw_redirect', True)
-                return streams.ResponseStreamReader(response)
+            self.metrics.add('download.saw_redirect', True)
+            # Follow the redirect ourselves without the OSF credentials: the target is usually a
+            # signed storage URL that must receive neither the cookie nor the Authorization header.
+            # The response is kept open on purpose, the returned stream reads from it.
+            response = await ClientSession().get(location)
 
         return streams.ResponseStreamReader(response)
 
