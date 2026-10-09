@@ -21,6 +21,7 @@ from mfr.server.handlers.exporters import ExportersHandler
 from mfr.server.handlers.renderers import RenderersHandler
 from mfr.server.handlers.core import ExtensionsStaticFileHandler
 from mfr.version import __version__
+from mfr.core import utils
 
 logger = logging.getLogger(__name__)
 access_logger = logging.getLogger('tornado.access')
@@ -43,7 +44,11 @@ def sig_handler(sig, frame):
         if exists_tornado_task:
             io_loop.call_later(1, stop_loop)
         else:
-            io_loop.stop()
+            io_loop.add_callback(close_and_stop)
+
+    async def close_and_stop():
+        await utils.close_client_session()
+        io_loop.stop()
 
     io_loop.add_callback_from_signal(stop_loop)
 

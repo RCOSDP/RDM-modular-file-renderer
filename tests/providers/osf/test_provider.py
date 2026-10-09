@@ -50,7 +50,7 @@ class TestOsfProviderDownload:
         session.get = mock.AsyncMock(return_value=final)
 
         with mock.patch.object(provider, '_make_request', mock.AsyncMock(return_value=redirect)) as make_request, \
-                mock.patch('mfr.providers.osf.provider.ClientSession', return_value=session):
+                mock.patch('mfr.core.utils.get_client_session', return_value=session):
             stream = asyncio.run(provider.download())
 
         # the first request goes to WaterButler with the MFR header and no redirect following

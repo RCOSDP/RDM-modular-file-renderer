@@ -38,7 +38,7 @@ class TestHttpProviderDownload:
         session = mock.Mock()
         session.get = mock.AsyncMock(return_value=response)
 
-        with mock.patch('mfr.providers.http.provider.ClientSession', return_value=session):
+        with mock.patch('mfr.core.utils.get_client_session', return_value=session):
             stream = asyncio.run(provider.download())
 
         session.get.assert_awaited_once_with(URL)
@@ -51,7 +51,7 @@ class TestHttpProviderDownload:
         session = mock.Mock()
         session.get = mock.AsyncMock(return_value=response)
 
-        with mock.patch('mfr.providers.http.provider.ClientSession', return_value=session):
+        with mock.patch('mfr.core.utils.get_client_session', return_value=session):
             with pytest.raises(exceptions.DownloadError) as exc:
                 asyncio.run(provider.download())
 

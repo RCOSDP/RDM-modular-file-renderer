@@ -1,7 +1,33 @@
 from importlib.metadata import entry_points
+
+import aiohttp
 from stevedore import driver
 
 from mfr.core import exceptions
+
+_client_session = None
+
+
+def get_client_session() -> aiohttp.ClientSession:
+    """Return the process-wide aiohttp session used to talk to WaterButler and the OSF.
+
+    Creating a session per request leaks the session and its connector (aiohttp logs
+    "Unclosed client session" for each of them), so a single session is shared. Cookies are
+    passed explicitly per request and must never be remembered across users, hence the dummy
+    cookie jar. Must be called from a running event loop.
+    """
+    global _client_session
+    if _client_session is None or _client_session.closed:
+        _client_session = aiohttp.ClientSession(cookie_jar=aiohttp.DummyCookieJar())
+    return _client_session
+
+
+async def close_client_session():
+    """Close the shared session, e.g. on server shutdown."""
+    global _client_session
+    if _client_session is not None and not _client_session.closed:
+        await _client_session.close()
+    _client_session = None
 
 
 def make_provider(name, request, url, action=None):

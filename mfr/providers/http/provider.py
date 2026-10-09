@@ -4,12 +4,12 @@ import logging
 import mimetypes
 from urllib.parse import urlparse
 
-from aiohttp import ClientSession
 
 from waterbutler.core import streams
 
 from mfr.core import provider
 from mfr.core import exceptions
+from mfr.core import utils
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class HttpProvider(provider.BaseProvider):
 
     async def download(self):
         # The response is kept open on purpose, the returned stream reads from it.
-        response = await ClientSession().get(self.url)
+        response = await utils.get_client_session().get(self.url)
         if response.status >= 400:
             err_resp = await response.text()
             await response.release()

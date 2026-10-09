@@ -53,3 +53,23 @@ class TestGetExporterName:
 def test_fix_name(inp, out):
     assert fix_name(inp) == out
     assert fix_name(f'.{inp}') == out
+
+
+class TestClientSession:
+
+    def test_session_is_shared_and_keeps_no_cookies(self):
+        import asyncio
+        import aiohttp
+
+        async def check():
+            first = mfr_utils.get_client_session()
+            second = mfr_utils.get_client_session()
+            assert first is second
+            assert isinstance(first.cookie_jar, aiohttp.DummyCookieJar)
+            await mfr_utils.close_client_session()
+            assert first.closed
+            third = mfr_utils.get_client_session()
+            assert third is not first
+            await mfr_utils.close_client_session()
+
+        asyncio.run(check())

@@ -7,11 +7,11 @@ from urllib.parse import urlparse
 import mimetypes
 
 import furl
-from aiohttp import ClientSession
 
 from waterbutler.core import streams
 
 from mfr.core import exceptions
+from mfr.core import utils
 from mfr.core import provider
 from mfr.core.utils import sizeof_fmt
 from mfr.providers.osf import settings
@@ -158,7 +158,7 @@ class OsfProvider(provider.BaseProvider):
             # Follow the redirect ourselves without the OSF credentials: the target is usually a
             # signed storage URL that must receive neither the cookie nor the Authorization header.
             # The response is kept open on purpose, the returned stream reads from it.
-            response = await ClientSession().get(location)
+            response = await utils.get_client_session().get(location)
 
         return streams.ResponseStreamReader(response)
 
@@ -224,4 +224,4 @@ class OsfProvider(provider.BaseProvider):
         if self.authorization:
             kwargs.setdefault('headers', {})['Authorization'] = 'Bearer ' + self.token
 
-        return await ClientSession()._request(method, url, *args, **kwargs)
+        return await utils.get_client_session().request(method, url, *args, **kwargs)
