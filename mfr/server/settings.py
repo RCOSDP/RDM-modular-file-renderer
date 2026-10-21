@@ -22,6 +22,11 @@ CORS_ALLOW_ORIGIN = config.get('CORS_ALLOW_ORIGIN', '*')
 
 CHUNK_SIZE = int(config.get('CHUNK_SIZE', 65536))  # 64KB
 MAX_BUFFER_SIZE = int(config.get('MAX_BUFFER_SIZE', 1024 * 1024 * 100))  # 100MB
+# MFR answers GET requests only and never reads a request body, but tornado parses form
+# bodies (multipart, URL-encoded) before the handler's method is checked, so cap what a
+# request may carry instead of letting it fill the 100MB buffer.
+MAX_BODY_SIZE = int(config.get('MAX_BODY_SIZE', 64 * 1024))  # 64KB
+MAX_HEADER_SIZE = int(config.get('MAX_HEADER_SIZE', 32 * 1024))  # 32KB
 
 PROVIDER_NAME = config.get('PROVIDER_NAME', 'osf')
 

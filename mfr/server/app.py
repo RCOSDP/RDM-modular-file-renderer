@@ -89,6 +89,21 @@ def make_app(debug):
     return app
 
 
+def http_server_options():
+    """Options for tornado's HTTPServer.
+
+    Besides the read buffer size, cap the request body and header sizes. MFR handlers only
+    answer GET, but tornado parses multipart and URL-encoded bodies before the handler's
+    method is checked, so without a cap a crafted body of up to the buffer size is parsed.
+    """
+    return {
+        'xheaders': server_settings.XHEADERS,
+        'max_buffer_size': server_settings.MAX_BUFFER_SIZE,
+        'max_body_size': server_settings.MAX_BODY_SIZE,
+        'max_header_size': server_settings.MAX_HEADER_SIZE,
+    }
+
+
 def serve():
     tornado.platform.asyncio.AsyncIOMainLoop().install()
 
@@ -104,9 +119,8 @@ def serve():
     app.listen(
         server_settings.PORT,
         address=server_settings.ADDRESS,
-        xheaders=server_settings.XHEADERS,
-        max_buffer_size=server_settings.MAX_BUFFER_SIZE,
         ssl_options=ssl_options,
+        **http_server_options(),
     )
 
     logger.info(f"Listening on {server_settings.ADDRESS}:{server_settings.PORT}")
