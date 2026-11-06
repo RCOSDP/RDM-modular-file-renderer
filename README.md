@@ -96,14 +96,6 @@ poetry run invoke install --develop
 poetry run invoke test
 ```
 
-### Known issues
-
-- **Updated, 2018-03-01:** *MFR has been updated to work with setuptools==37.0.0 as of MFR release v0.25. The following issue should not happen for new installs, but may occur if you downgrade to an older version.* Running `invoke install -d` with setuptools v31 or greater can break MFR.  The symptom error message is: `"AttributeError: module 'mfr' has no attribute '__version__'".`  If you encounter this, you will need to remove the file `mfr-nspkg.pth` from your virtualenv directory, run `pip install setuptools==30.4.0`, then re-run `invoke install -d`.
-
-- The error `def create_default_context(purpose=ssl.Purpose.SERVER_AUTH, *, cafile=None, capath=None, cadata=None): SyntaxError: invalid syntax` is caused by inadvertently running the wrong version of Python. This can be caused by hashing the alias `inv`. To fix this run the command `hash -d inv` then run `inv server`.
-
-- `invoke $command` results in `'$command' did not receive all required positional arguments!`: this error message occurs when trying to run MFR v0.19.0+ with `invoke<0.13.0`.  Run `pip install invoke==0.13.0`, then retry your command.
-
 ### Create your own module
 
 Interested in adding support for a new provider or file format? Check out the CONTRIBUTING.rst docs.
