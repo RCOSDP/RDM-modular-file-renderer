@@ -105,6 +105,22 @@ def test_pdfjs_viewer_matches_declared_version():
     assert marker.group(0) in core, 'viewer.mjs and pdf.mjs are from different builds'
 
 
+def test_sbom_paths_exist():
+    """vendored-libraries.cdx.json declares the bundled libraries not installed from npm; every
+    path it records must exist, so the declaration does not drift from the tree."""
+    import json
+    root = os.path.dirname(MFR_ROOT)
+    bom = json.load(open(os.path.join(root, 'vendored-libraries.cdx.json'), encoding='utf-8'))
+    assert bom['bomFormat'] == 'CycloneDX'
+    assert len(bom["components"]) >= 4
+    for component in bom['components']:
+        assert component.get('purl'), f'{component["name"]} has no purl'
+        paths = [p['value'] for p in component.get('properties', []) if p['name'] == 'mfr:path']
+        assert paths, f'{component["name"]} records no mfr:path'
+        for path in paths:
+            assert os.path.exists(os.path.join(root, path)), f'{component["name"]}: {path} missing'
+
+
 def test_stylesheet_urls_exist():
     """Files referenced with url(...) from the served stylesheets must exist next to them (the
     SlickGrid and Bootstrap stylesheets refer to images and fonts by relative path)."""
