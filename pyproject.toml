@@ -743,9 +743,6 @@ pdf = "mfr.extensions.pdf:PdfRenderer"
 # rst
 rst = "mfr.extensions.rst:RstRenderer"
 
-# svg
-# .svg = mfr.extensions.svg:SvgRenderer
-
 # tabular
 csv = "mfr.extensions.tabular:TabularRenderer"
 tsv = "mfr.extensions.tabular:TabularRenderer"
