@@ -46,6 +46,15 @@ poetry run invoke install
 poetry run invoke server
 ```
 
+The browser-side libraries the renderers load (pdf.js, jQuery, Bootstrap, ...) are declared in
+`package.json` and are not kept in the repository. Install them with npm and copy them into the
+static directories before starting the server, and again whenever `package.json` changes:
+
+```bash
+npm ci
+poetry run invoke assets
+```
+
 ### Configuring
 
 MFR configuration is done through a JSON file (`mfr-test.json`) that lives in the `.cos` directory of your home directory.  If this is your first time setting up MFR or its sister project, [WaterButler](https://github.com/CenterForOpenScience/waterbutler/), you probably do not have this directory and will need to create it:

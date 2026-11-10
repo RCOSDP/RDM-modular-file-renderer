@@ -1,4 +1,4 @@
-<script src="/static/js/jquery-1.11.3.min.js"></script>
+<script src="/static/js/jquery.min.js"></script>
 
 <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css"/>
 <script src="/static/js/bootstrap.min.js"></script>
@@ -23,7 +23,7 @@
 <script src="/static/js/mfr.child.js"></script>
 
 ## JQuery Zoom and Mouse Wheel scripts
-<script src="${base}/js/jquery.mousewheel.min.js"></script>
+<script src="${base}/js/jquery.mousewheel.js"></script>
 <script src="${base}/js/jquery.zoom.js"></script>
 
 ## The main script for enable Hi-Res and Zoom for rendered images

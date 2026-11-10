@@ -1,0 +1,10 @@
+{
+  "name": "mfr-assets",
+  "private": true,
+  "description": "Browser-side libraries served by the MFR renderers; copied into the static directories by `invoke assets`",
+  "dependencies": {
+    "bootstrap": "3.3.5",
+    "jquery": "1.11.3",
+    "jquery-mousewheel": "3.1.13"
+  }
+}

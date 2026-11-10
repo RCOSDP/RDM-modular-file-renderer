@@ -1,9 +1,32 @@
 import os
+import shutil
 import sys
 
 from invoke import task
 
 WHEELHOUSE_PATH = os.environ.get('WHEELHOUSE')
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+NODE_MODULES = os.path.join(ROOT, 'node_modules')
+
+# Browser-side libraries are declared in package.json and installed by `npm ci`; `invoke assets`
+# copies the served files from node_modules into the static directories the templates load them
+# from. The copies are not tracked by git (see .gitignore).
+ASSET_FILES = {
+    # destination under mfr/: source under node_modules/
+    'server/static/js/jquery.min.js': 'jquery/dist/jquery.min.js',
+    'server/static/js/jquery.min.map': 'jquery/dist/jquery.min.map',
+    'server/static/js/bootstrap.min.js': 'bootstrap/dist/js/bootstrap.min.js',
+    'server/static/css/bootstrap.min.css': 'bootstrap/dist/css/bootstrap.min.css',
+    'extensions/tabular/static/js/bootstrap.min.js': 'bootstrap/dist/js/bootstrap.min.js',
+    'extensions/tabular/static/css/bootstrap.min.css': 'bootstrap/dist/css/bootstrap.min.css',
+    'extensions/image/static/js/jquery.mousewheel.js': 'jquery-mousewheel/jquery.mousewheel.js',
+}
+# bootstrap.min.css refers to ../fonts/, so the glyphicon fonts go next to each copy of it
+for _font in ('eot', 'svg', 'ttf', 'woff', 'woff2'):
+    for _static in ('server/static', 'extensions/tabular/static'):
+        ASSET_FILES[f'{_static}/fonts/glyphicons-halflings-regular.{_font}'] = \
+            f'bootstrap/dist/fonts/glyphicons-halflings-regular.{_font}'
 
 
 @task
@@ -17,6 +40,25 @@ def wheelhouse(ctx, develop=False, pty=True):
 def install(ctx, develop=False, pty=True):
     extras = '--with dev' if develop else ''
     ctx.run(f'poetry install {extras}', pty=pty)
+
+
+@task
+def assets(ctx):
+    """Copy the browser-side libraries from node_modules into the static directories.
+
+    Run `npm ci` first. The Docker build runs this in the build stage; for a local checkout run
+    it once after cloning and again whenever package.json changes.
+    """
+    if not os.path.isdir(NODE_MODULES):
+        sys.exit('node_modules/ not found; run `npm ci` first')
+    for dest, src in ASSET_FILES.items():
+        src_path = os.path.join(NODE_MODULES, src)
+        if not os.path.isfile(src_path):
+            sys.exit(f'node_modules/{src} is missing; package.json and ASSET_FILES disagree')
+        dest_path = os.path.join(ROOT, 'mfr', dest)
+        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+        shutil.copyfile(src_path, dest_path)
+    print(f'copied {len(ASSET_FILES)} files into mfr/')
 
 
 @task

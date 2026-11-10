@@ -1,3 +1,12 @@
+# Assets stage: installs the browser-side libraries declared in package.json. Only
+# node_modules is carried over, so Node.js and npm stay out of the other stages.
+FROM node:24-slim AS assets
+
+WORKDIR /assets
+COPY package.json package-lock.json /assets/
+RUN npm ci --ignore-scripts --no-audit --no-fund
+
+
 # Build stage: compilers and development headers are only needed to install
 # the Python dependencies, so they stay out of the runtime image.
 FROM python:3.13-slim AS build
@@ -35,6 +44,10 @@ COPY ./ /code/
 # Install the project and verify the resolved dependency tree is self-consistent
 RUN poetry install --without=docs \
     && python -m pip check
+
+# Copy the served files from node_modules into the static directories (tasks.py)
+COPY --from=assets /assets/node_modules /code/node_modules
+RUN /usr/local/bin/python -m invoke assets
 
 
 # Runtime stage

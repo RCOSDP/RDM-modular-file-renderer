@@ -90,3 +90,15 @@ node_modules/
 # Asynchronous HTTP
 ######################
 /src/
+
+# Browser-side libraries copied from node_modules by `invoke assets`
+######################
+/mfr/server/static/js/jquery.min.js
+/mfr/server/static/js/jquery.min.map
+/mfr/server/static/js/bootstrap.min.js
+/mfr/server/static/css/bootstrap.min.css
+/mfr/server/static/fonts/
+/mfr/extensions/tabular/static/js/bootstrap.min.js
+/mfr/extensions/tabular/static/css/bootstrap.min.css
+/mfr/extensions/tabular/static/fonts/
+/mfr/extensions/image/static/js/jquery.mousewheel.js
