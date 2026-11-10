@@ -102,3 +102,6 @@ node_modules/
 /mfr/extensions/tabular/static/css/bootstrap.min.css
 /mfr/extensions/tabular/static/fonts/
 /mfr/extensions/image/static/js/jquery.mousewheel.js
+/vendor/
+/mfr/extensions/pdf/static/build/
+/mfr/extensions/pdf/static/web/

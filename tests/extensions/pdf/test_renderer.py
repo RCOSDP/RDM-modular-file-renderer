@@ -1,3 +1,5 @@
+import html
+
 import furl
 import pytest
 
@@ -62,9 +64,10 @@ class TestPdfRenderer:
 
     def test_render_pdf(self, renderer, metadata, assets_url):
         body = renderer._render()
-        assert '<base href="{}/{}/web/" target="_blank">'.format(assets_url, 'pdf') in body
+        assert f'<script src="{assets_url}/pdf/web/viewer.mjs" type="module"></script>' in body
+        assert f'data-mfr-assets="{assets_url}/pdf"' in body
         assert '<div id="viewer" class="pdfViewer"></div>' in body
-        assert f'DEFAULT_URL = \'{metadata.download_url}\'' in body
+        assert f'data-mfr-url="{html.escape(metadata.download_url)}"' in body
 
     def test_render_pdf_with_single_quote_in_name(self, assets_url):
 
@@ -78,10 +81,11 @@ class TestPdfRenderer:
 
         body = renderer._render()
 
-        assert '<base href="{}/{}/web/" target="_blank">'.format(assets_url, 'pdf') in body
+        assert f'<script src="{assets_url}/pdf/web/viewer.mjs" type="module"></script>' in body
+        assert f'data-mfr-assets="{assets_url}/pdf"' in body
         assert '<div id="viewer" class="pdfViewer"></div>' in body
-        assert f'DEFAULT_URL = \'{download_url}\'' not in body
-        assert f'DEFAULT_URL = \'{safe_download_url}\'' in body
+        assert f'data-mfr-url="{html.escape(download_url)}"' not in body
+        assert f'data-mfr-url="{html.escape(safe_download_url)}"' in body
 
     def test_render_tif(self, tif_renderer, assets_url):
         exported_url = furl.furl(tif_renderer.export_url)
@@ -89,9 +93,10 @@ class TestPdfRenderer:
                                                      settings.EXPORT_TYPE)
 
         body = tif_renderer._render()
-        assert '<base href="{}/{}/web/" target="_blank">'.format(assets_url, 'pdf') in body
+        assert f'<script src="{assets_url}/pdf/web/viewer.mjs" type="module"></script>' in body
+        assert f'data-mfr-assets="{assets_url}/pdf"' in body
         assert '<div id="viewer" class="pdfViewer"></div>' in body
-        assert f'DEFAULT_URL = \'{exported_url.url}\'' in body
+        assert f'data-mfr-url="{html.escape(exported_url.url)}"' in body
 
     def test_render_docx(self, assets_url):
 
@@ -104,7 +109,8 @@ class TestPdfRenderer:
 
         body = renderer._render()
 
-        assert '<base href="{}/{}/web/" target="_blank">'.format(assets_url, 'pdf') in body
+        assert f'<script src="{assets_url}/pdf/web/viewer.mjs" type="module"></script>' in body
+        assert f'data-mfr-assets="{assets_url}/pdf"' in body
         assert '<div id="viewer" class="pdfViewer"></div>' in body
-        assert f'DEFAULT_URL = \'{export_url}\'' not in body
-        assert f'DEFAULT_URL = \'{safe_url}\'' in body
+        assert f'data-mfr-url="{html.escape(export_url)}"' not in body
+        assert f'data-mfr-url="{html.escape(safe_url)}"' in body

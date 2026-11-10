@@ -170,4 +170,3 @@ logging.config.dictConfig(logging_config)
 
 
 SENTRY_DSN = config.get_nullable('SENTRY_DSN', None)
-GOOGLE_ANALYTICS_TRACKING_ID = config.get_nullable('GOOGLE_ANALYTICS_TRACKING_ID', None)

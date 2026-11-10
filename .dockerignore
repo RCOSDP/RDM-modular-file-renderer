@@ -4,3 +4,4 @@
 Dockerfile
 *venv*
 node_modules
+vendor

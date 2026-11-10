@@ -46,12 +46,16 @@ poetry run invoke install
 poetry run invoke server
 ```
 
-The browser-side libraries the renderers load (pdf.js, jQuery, Bootstrap, ...) are declared in
-`package.json` and are not kept in the repository. Install them with npm and copy them into the
-static directories before starting the server, and again whenever `package.json` changes:
+The browser-side libraries the renderers load are not kept in the repository: jQuery, Bootstrap,
+jquery-mousewheel and PDF.js are declared in `package.json`. The PDF.js viewer page is not on
+npm, so the task below also downloads the release archive of the installed PDF.js version from
+GitHub and checks it against the SHA-256 recorded in `package.json` (`mfr.pdfjsViewerArchive`;
+add the digest shown on the GitHub release page when updating the version). Install the npm
+packages and copy everything into the static directories before starting the server, and again
+whenever `package.json` changes:
 
 ```bash
-npm ci
+npm ci --omit=optional
 poetry run invoke assets
 ```
 

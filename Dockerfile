@@ -4,7 +4,8 @@ FROM node:24-slim AS assets
 
 WORKDIR /assets
 COPY package.json package-lock.json /assets/
-RUN npm ci --ignore-scripts --no-audit --no-fund
+# --omit=optional: pdfjs-dist lists a native canvas binding for Node.js that the browser never uses
+RUN npm ci --omit=optional --ignore-scripts --no-audit --no-fund
 
 
 # Build stage: compilers and development headers are only needed to install
@@ -45,7 +46,8 @@ COPY ./ /code/
 RUN poetry install --without=docs \
     && python -m pip check
 
-# Copy the served files from node_modules into the static directories (tasks.py)
+# Copy the served files from node_modules and the PDF.js viewer archive into the static
+# directories (tasks.py)
 COPY --from=assets /assets/node_modules /code/node_modules
 RUN /usr/local/bin/python -m invoke assets
 
