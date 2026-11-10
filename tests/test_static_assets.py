@@ -103,3 +103,18 @@ def test_pdfjs_viewer_matches_declared_version():
     marker = re.search(r'const INTERNAL_EVT = "([0-9a-f-]{36})"', viewer)
     assert marker, 'INTERNAL_EVT not found in viewer.mjs'
     assert marker.group(0) in core, 'viewer.mjs and pdf.mjs are from different builds'
+
+
+def test_stylesheet_urls_exist():
+    """Files referenced with url(...) from the served stylesheets must exist next to them (the
+    SlickGrid and Bootstrap stylesheets refer to images and fonts by relative path)."""
+    missing = []
+    for css in glob.glob(os.path.join(MFR_ROOT, '**', 'static', '**', '*.css'), recursive=True):
+        text = open(css, encoding='utf-8', errors='replace').read()
+        for ref in re.findall(r'url\(\s*["\']?([^"\')?#]+)', text):
+            if ref.startswith(SKIP_PREFIXES) or ref.startswith('data:'):
+                continue
+            path = os.path.normpath(os.path.join(os.path.dirname(css), *ref.split('/')))
+            if not os.path.isfile(path):
+                missing.append(f'{os.path.relpath(css, MFR_ROOT)} -> {ref}')
+    assert not missing, '\n'.join(missing)

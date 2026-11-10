@@ -144,7 +144,7 @@
             ## Quirks: Need to use an in-memory copy of the image to prevent the zoom image from
             ##         moving around.  Without this in-memoery copy, the zoom image moves around
             ##         horizontally and "centers" wherever the mouse cursor is.
-            $("<img>").attr("src", $(baseImage[0]).attr("src")).load(function () {
+            $("<img>").attr("src", $(baseImage[0]).attr("src")).on("load", function () {
 
                 widthLimit = this.width;
                 heightLimit = this.height;

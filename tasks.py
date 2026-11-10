@@ -24,6 +24,13 @@ ASSET_FILES = {
     'extensions/tabular/static/js/bootstrap.min.js': 'bootstrap/dist/js/bootstrap.min.js',
     'extensions/tabular/static/css/bootstrap.min.css': 'bootstrap/dist/css/bootstrap.min.css',
     'extensions/image/static/js/jquery.mousewheel.js': 'jquery-mousewheel/jquery.mousewheel.js',
+    'extensions/tabular/static/js/slick.core.js': 'slickgrid/slick.core.js',
+    'extensions/tabular/static/js/slick.grid.js': 'slickgrid/slick.grid.js',
+    'extensions/tabular/static/js/slick.dataview.js': 'slickgrid/slick.dataview.js',
+    'extensions/tabular/static/css/slick.grid.css': 'slickgrid/slick.grid.css',
+    'extensions/tabular/static/css/slick-default-theme.css': 'slickgrid/slick-default-theme.css',
+    # column resizing in SlickGrid needs the drag events plugin it ships in lib/
+    'extensions/tabular/static/js/jquery.event.drag.js': 'slickgrid/lib/jquery.event.drag-2.3.0.js',
 }
 # bootstrap.min.css refers to ../fonts/, so the glyphicon fonts go next to each copy of it
 for _font in ('eot', 'svg', 'ttf', 'woff', 'woff2'):
@@ -46,6 +53,7 @@ PDFJS_STATIC = os.path.join(ROOT, 'mfr', 'extensions', 'pdf', 'static')
 PDFJS_NPM = os.path.join(NODE_MODULES, 'pdfjs-dist')
 # directories copied whole from node_modules/pdfjs-dist: destination under mfr/: source
 ASSET_DIRS = {
+    'extensions/tabular/static/css/images': 'slickgrid/images',  # slick.grid.css refers to images/
     'extensions/pdf/static/web/cmaps': 'pdfjs-dist/cmaps',
     'extensions/pdf/static/web/standard_fonts': 'pdfjs-dist/standard_fonts',
     'extensions/pdf/static/web/wasm': 'pdfjs-dist/wasm',

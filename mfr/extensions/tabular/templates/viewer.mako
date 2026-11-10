@@ -20,7 +20,7 @@
 
 <script src="/static/js/jquery.min.js"></script>
 <script src="${base}/js/bootstrap.min.js"></script>
-<script src="${base}/js/jquery.event.drag-2.2.js"></script>
+<script src="${base}/js/jquery.event.drag.js"></script>
 <script src="${base}/js/slick.core.js"></script>
 <script src="${base}/js/slick.grid.js"></script>
 <script>
