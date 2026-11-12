@@ -4,7 +4,7 @@
         max-width: 100%;
     }
 </style>
-<script src="/static/js/jquery-1.11.3.min.js" type="text/javascript"></script>
+<script src="/static/js/jquery.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
 <canvas id="mfrViewer" tabindex="-1"></canvas>

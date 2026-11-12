@@ -4,10 +4,11 @@
 <link rel="stylesheet" href="${base}/css/bootstrap.min.css">
 
 <div id="mfrViewer" style="min-height: ${height}px;">
+    <div id="mfr-tabular-notice" class="alert alert-warning" style="display:none; font-size: 1.05em;"></div>
     <div class="scroller scroller-left"><i class="glyphicon glyphicon-chevron-left"></i></div>
     <div class="scroller scroller-right"><i class="glyphicon glyphicon-chevron-right"></i></div>
     <nav class="wrapper">
-        <ul id="tabular-tabs" class="nav nav-tabs list" style="height: 45px; overflow: auto; white-space: nowrap;"> 
+        <ul id="tabular-tabs" class="nav nav-tabs list" style="height: 45px; overflow: auto; white-space: nowrap;">
         </ul>
     </nav>
     <div id="inlineFilterPanel" style="background:#dddddd;padding:3px;color:black;">
@@ -17,9 +18,9 @@
     </div>
 </div>
 
-<script src="/static/js/jquery-1.11.3.min.js"></script>
+<script src="/static/js/jquery.min.js"></script>
 <script src="${base}/js/bootstrap.min.js"></script>
-<script src="${base}/js/jquery.event.drag-2.2.js"></script>
+<script src="${base}/js/jquery.event.drag.js"></script>
 <script src="${base}/js/slick.core.js"></script>
 <script src="${base}/js/slick.grid.js"></script>
 <script>
@@ -30,28 +31,44 @@
         var grid;
         var data;
         var searchString = "";
+        var MAX_ROWS_LIMIT = ${max_size};
+
+        function refreshNotice() {
+            var $n = $("#mfr-tabular-notice");
+            if (!grid) { $n.hide().text(""); return; }
+            var rendered = grid.getDataLength ? grid.getDataLength() : (data ? data.length : 0);
+            if (rendered >= MAX_ROWS_LIMIT) {
+                $n.text("Table exceeds the max size limit — rendered first " + rendered + " rows.");
+                $n.show();
+            } else {
+                $n.hide().text("");
+            }
+        }
 
         for (var sheetName in sheets){
             var sheet = sheets[sheetName];
-            sheetName = sheetName.replace( /(:|\.|\[|\]|,|@|&|\ )/g, '_' ); //Handle characters that can't be in DOM ID's
-            $("#tabular-tabs").append('<li role="presentation" style="display:inline-block; float: none;"><a id="' + sheetName + '" aria-controls="' + sheetName + '" role="tab" data-toggle="tab">'+ sheetName + '</a></li>');
-            gridArr[sheetName] = [sheet[0], sheet[1]];
+            // Handle characters that can't be in DOM ID's
+            var sheetCoded = window.btoa(encodeURIComponent(sheetName)).replace(/=/g, '');
+            $("#tabular-tabs").append('<li role="presentation" style="display:inline-block; float: none;"><a id="' + sheetCoded + '" aria-controls="' + sheetCoded + '" role="tab" data-toggle="tab">'+ sheetName + '</a></li>');
+            gridArr[sheetCoded] = [sheet[0], sheet[1]];
 
-            $('#'+sheetName).click(function (e) {
+            $('#'+sheetCoded).click(function (e) {
                 e.preventDefault();
                 var columns = gridArr[$(this).attr('id')][0];
                 var rows = gridArr[$(this).attr('id')][1];
 
                 grid = new Slick.Grid('#mfrGrid', rows, columns, options);
                 searchString = "";
-                $("#txtSearch").value = "";
+                $("#txtSearch").val("");
                 data = grid.getData();
                 grid.onSort.subscribe(sortData);
+                refreshNotice();
             });
         }
 
         $("#tabular-tabs").tab();
         $("#tabular-tabs a:first").click();
+        setTimeout(refreshNotice, 0);
 
         $("#txtSearch").keyup(function (e) {
             // clear on Esc
@@ -74,17 +91,21 @@
 
         function filterData(data, search) {
             var filteredData = [];
-            var re = new RegExp(search, 'i');
-            for (var i = 0; i<data.length; i++){
+            var safeSearch = String(search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            var re = new RegExp(safeSearch, 'i');
+            for (var i = 0; i < data.length; i++) {
                 var filtered = false;
                 var item = data[i];
                 for (var title in item) {
-                    if (search !== '' && item[title].toString().match(re)) {
-                        filtered = filtered || true;
-                        continue;
+                    // Be null-safe: openpyxl may yield null/undefined for empty cells
+                    var cell = item[title];
+                    var str = (cell === null || cell === undefined) ? '' : String(cell);
+                    if (safeSearch !== '' && re.test(str)) {
+                        filtered = true;
+                        break;
                     }
                 }
-                if (filtered){
+                if (filtered) {
                     filteredData.push(item);
                 }
             }
@@ -132,7 +153,7 @@
             grid.invalidate();
             grid.render();
         }
-        
+
         function reAdjust(){
             liFirstPosLeft = $('.list li:first').position().left;
             liLastPosRight = $('.list li:last').position().left + $('.list li:last').width();

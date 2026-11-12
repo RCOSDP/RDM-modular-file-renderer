@@ -1,4 +1,4 @@
-<script src="/static/js/jquery-1.11.3.min.js"></script>
+<script src="/static/js/jquery.min.js"></script>
 
 <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css"/>
 <script src="/static/js/bootstrap.min.js"></script>
@@ -23,7 +23,7 @@
 <script src="/static/js/mfr.child.js"></script>
 
 ## JQuery Zoom and Mouse Wheel scripts
-<script src="${base}/js/jquery.mousewheel.min.js"></script>
+<script src="${base}/js/jquery.mousewheel.js"></script>
 <script src="${base}/js/jquery.zoom.js"></script>
 
 ## The main script for enable Hi-Res and Zoom for rendered images
@@ -52,8 +52,7 @@
 
     $(document).ready(function() {
 
-        ## Reference on how mobile is detected: https://stackoverflow.com/a/10364620
-        var isMobile = window.matchMedia("only screen and (max-width: 760px)");
+        var isMobile = window.innerWidth <= 768;
 
         ## Enable the zoom feature only for desktop browsers
         if (!isMobile.matches) {
@@ -145,7 +144,7 @@
             ## Quirks: Need to use an in-memory copy of the image to prevent the zoom image from
             ##         moving around.  Without this in-memoery copy, the zoom image moves around
             ##         horizontally and "centers" wherever the mouse cursor is.
-            $("<img>").attr("src", $(baseImage[0]).attr("src")).load(function () {
+            $("<img>").attr("src", $(baseImage[0]).attr("src")).on("load", function () {
 
                 widthLimit = this.width;
                 heightLimit = this.height;

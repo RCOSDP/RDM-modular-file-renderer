@@ -1,3 +1,4 @@
+import json
 import os
 
 from mako.lookup import TemplateLookup
@@ -20,7 +21,7 @@ class JASPRenderer(extension.BaseRenderer):
 
     MESSAGE_FILE_CORRUPT = 'This JASP file is corrupt and cannot be viewed.'
 
-    def render(self):
+    def _render(self):
         try:
             with ZipFile(self.file_path) as zip_file:
                 self._check_file(zip_file)
@@ -28,7 +29,7 @@ class JASPRenderer(extension.BaseRenderer):
                 return self.TEMPLATE.render(base=self.assets_url, body=body)
         except BadZipFile as err:
             raise exceptions.JaspFileCorruptError(
-                '{} Failure to unzip. {}.'.format(self.MESSAGE_FILE_CORRUPT, str(err)),
+                f'{self.MESSAGE_FILE_CORRUPT} Failure to unzip. {str(err)}.',
                 extension=self.metadata.ext,
                 corruption_type='bad_zip',
                 reason=str(err),
@@ -49,7 +50,7 @@ class JASPRenderer(extension.BaseRenderer):
                 index = index_data.read().decode('utf-8')
         except KeyError:
             raise exceptions.JaspFileCorruptError(
-                '{} Missing index.html.'.format(self.MESSAGE_FILE_CORRUPT),
+                f'{self.MESSAGE_FILE_CORRUPT} Missing index.html.',
                 extension=self.metadata.ext,
                 corruption_type='key_error',
                 reason='zip missing ./index.html',
@@ -67,16 +68,30 @@ class JASPRenderer(extension.BaseRenderer):
         """
         # Extract manifest file content
         try:
-            with zip_file.open('META-INF/MANIFEST.MF') as manifest_data:
-                manifest = manifest_data.read().decode('utf-8')
+            try:
+                # new manifest location
+                with zip_file.open('manifest.json') as manifest_data:
+                    manifest, flavor = manifest_data.read().decode('utf-8'), 'json'
+            except KeyError:
+                # old manifest location
+                with zip_file.open('META-INF/MANIFEST.MF') as manifest_data:
+                    manifest, flavor = manifest_data.read().decode('utf-8'), 'java'
         except KeyError:
             raise exceptions.JaspFileCorruptError(
-                '{} Missing META-INF/MANIFEST.MF'.format(self.MESSAGE_FILE_CORRUPT),
+                f'{self.MESSAGE_FILE_CORRUPT} Missing manifest',
                 extension=self.metadata.ext,
                 corruption_type='key_error',
-                reason='zip missing ./META-INF/MANIFEST.MF',
+                reason='zip missing manifest',
             )
 
+        if flavor == 'java':
+            self._verify_java_manifest(manifest)
+        else:
+            self._verify_json_manifest(manifest)
+
+        return True
+
+    def _verify_java_manifest(self, manifest):
         lines = manifest.split('\n')
 
         # Search for Data-Archive-Version
@@ -92,7 +107,7 @@ class JASPRenderer(extension.BaseRenderer):
                     createdBy = str(value)
         if not dataArchiveVersionStr:
             raise exceptions.JaspFileCorruptError(
-                '{} Data-Archive-Version not found.'.format(self.MESSAGE_FILE_CORRUPT),
+                f'{self.MESSAGE_FILE_CORRUPT} Data-Archive-Version not found.',
                 extension=self.metadata.ext,
                 corruption_type='manifest_parse_error',
                 reason='Data-Archive-Version not found.',
@@ -115,10 +130,47 @@ class JASPRenderer(extension.BaseRenderer):
                 )
         except TypeError:
             raise exceptions.JaspFileCorruptError(
-                '{} Data-Archive-Version not parsable.'.format(self.MESSAGE_FILE_CORRUPT),
+                f'{self.MESSAGE_FILE_CORRUPT} Data-Archive-Version not parsable.',
                 extension=self.metadata.ext,
                 corruption_type='manifest_parse_error',
-                reason='Data-Archive-Version ({}) not parsable.'.format(dataArchiveVersionStr),
+                reason=f'Data-Archive-Version ({dataArchiveVersionStr}) not parsable.',
             )
 
-        return True
+        return
+
+    def _verify_json_manifest(self, manifest):
+
+        manifest_data = json.loads(manifest)
+
+        jasp_archive_version_str = manifest_data.get('jaspArchiveVersion', None)
+        if not jasp_archive_version_str:
+            raise exceptions.JaspFileCorruptError(
+                f'{self.MESSAGE_FILE_CORRUPT} jaspArchiveVersion not found.',
+                extension=self.metadata.ext,
+                corruption_type='manifest_parse_error',
+                reason='jaspArchiveVersion not found.',
+            )
+
+        # Check that the file is new enough (contains preview content)
+        jasp_archive_version = LooseVersion(jasp_archive_version_str)
+        try:
+            if jasp_archive_version < self.MINIMUM_VERSION:
+                minimum_version = self.MINIMUM_VERSION.vstring
+                data_archive_version = jasp_archive_version.vstring
+                raise exceptions.JaspVersionError(
+                    'This JASP file was created with an older data archive '
+                    'version ({}) and cannot be previewed. Minimum data archive '
+                    'version is {}.'.format(data_archive_version, minimum_version),
+                    extension=self.metadata.ext,
+                    actual_version=data_archive_version,
+                    required_version=minimum_version,
+                )
+        except TypeError:
+            raise exceptions.JaspFileCorruptError(
+                f'{self.MESSAGE_FILE_CORRUPT} jaspArchiveVersion not parsable.',
+                extension=self.metadata.ext,
+                corruption_type='manifest_parse_error',
+                reason=f'jaspArchiveVersion ({jasp_archive_version_str}) not parsable.',
+            )
+
+        return

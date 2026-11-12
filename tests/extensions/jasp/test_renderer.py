@@ -1,4 +1,3 @@
-
 import os
 import pytest
 
@@ -11,8 +10,12 @@ def metadata():
     return ProviderMetadata('JASP', '.jasp', 'application/octet-stream', '1234', 'http://wb.osf.io/file/JASP.jasp?token=1234')
 
 @pytest.fixture
-def ok_path():
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files', 'ok.jasp')
+def ok_old_manifest_path():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files', 'ok-old-manifest.jasp')
+
+@pytest.fixture
+def ok_new_manifest_path():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files', 'ok-new-manifest.jasp')
 
 @pytest.fixture
 def not_a_zip_file_path():
@@ -50,8 +53,8 @@ def assets_url():
 
 
 @pytest.fixture
-def export_url():
-    return 'http://mfr.osf.io/export?url=' + url()
+def export_url(url):
+    return 'http://mfr.osf.io/export?url=' + url
 
 
 @pytest.fixture
@@ -60,20 +63,25 @@ def extension():
 
 
 @pytest.fixture
-def renderer(metadata, ok_path, url, assets_url, export_url):
-    return JASPRenderer(metadata, ok_path, url, assets_url, export_url)
+def renderer(metadata, ok_new_manifest_path, url, assets_url, export_url):
+    return JASPRenderer(metadata, ok_new_manifest_path, url, assets_url, export_url)
 
 
 class TestCodeJASPRenderer:
 
     def test_render_JASP(self, renderer):
-        body = renderer.render()
+        body = renderer._render()
+        assert '<div style="word-wrap: break-word; overflow: auto;" class="mfrViewer">' in body
+
+    def test_render_JASP_old_manifest(self, metadata, ok_old_manifest_path, url, assets_url, export_url):
+        renderer = JASPRenderer(metadata, ok_old_manifest_path, url, assets_url, export_url)
+        body = renderer._render()
         assert '<div style="word-wrap: break-word; overflow: auto;" class="mfrViewer">' in body
 
     def test_render_JASP_not_a_zip_file(self, metadata, not_a_zip_file_path, url, assets_url, export_url):
         try:
             renderer = JASPRenderer(metadata, not_a_zip_file_path, url, assets_url, export_url)
-            renderer.render()
+            renderer._render()
         except RendererError:
             return
 
@@ -82,7 +90,7 @@ class TestCodeJASPRenderer:
     def test_render_JASP_no_manifest(self, metadata, no_manifest_path, url, assets_url, export_url):
         try:
             renderer = JASPRenderer(metadata, no_manifest_path, url, assets_url, export_url)
-            renderer.render()
+            renderer._render()
         except RendererError:
             return
 
@@ -91,7 +99,7 @@ class TestCodeJASPRenderer:
     def test_render_JASP_no_data_archive_version_in_manifest(self, metadata, no_data_archive_version_in_manifest_path, url, assets_url, export_url):
         try:
             renderer = JASPRenderer(metadata, no_data_archive_version_in_manifest_path, url, assets_url, export_url)
-            renderer.render()
+            renderer._render()
         except RendererError:
             return
 
@@ -100,7 +108,7 @@ class TestCodeJASPRenderer:
     def test_render_JASP_data_archive_is_too_old(self, metadata, data_archive_version_is_too_old_path, url, assets_url, export_url):
         try:
             renderer = JASPRenderer(metadata, data_archive_version_is_too_old_path, url, assets_url, export_url)
-            renderer.render()
+            renderer._render()
         except RendererError:
             return
 
@@ -109,7 +117,7 @@ class TestCodeJASPRenderer:
     def test_render_JASP_no_index_html(self, metadata, no_index_html_path, url, assets_url, export_url):
         try:
             renderer = JASPRenderer(metadata, no_index_html_path, url, assets_url, export_url)
-            renderer.render()
+            renderer._render()
         except RendererError:
             return
 
@@ -117,10 +125,10 @@ class TestCodeJASPRenderer:
 
     def test_render_JASP_contains_malicious_script(self, metadata, contains_malicious_script_path, url, assets_url, export_url):
         renderer = JASPRenderer(metadata, contains_malicious_script_path, url, assets_url, export_url)
-        body = renderer.render()
+        body = renderer._render()
 
         assert '<script src="link-to-something-malicious.js">' not in body
-  
+
 
     def test_render_JASP_file_required(self, renderer):
         assert renderer.file_required is True

@@ -22,7 +22,7 @@ class JamoviRenderer(extension.BaseRenderer):
     MESSAGE_FILE_CORRUPT = 'This jamovi file is corrupt and cannot be viewed.'
     MESSAGE_NO_PREVIEW = 'This jamovi file does not support previews.'
 
-    def render(self):
+    def _render(self):
         try:
             with ZipFile(self.file_path) as zip_file:
                 self._check_file(zip_file)
@@ -30,7 +30,7 @@ class JamoviRenderer(extension.BaseRenderer):
                 return self.TEMPLATE.render(base=self.assets_url, body=body)
         except BadZipFile as err:
             raise jamovi_exceptions.JamoviRendererError(
-                '{} {}.'.format(self.MESSAGE_FILE_CORRUPT, str(err)),
+                f'{self.MESSAGE_FILE_CORRUPT} {str(err)}.',
                 extension=self.metadata.ext,
                 corruption_type='bad_zip',
                 reason=str(err),
@@ -66,14 +66,20 @@ class JamoviRenderer(extension.BaseRenderer):
         """
         # Extract manifest file content
         try:
-            with zip_file.open('META-INF/MANIFEST.MF') as manifest_data:
-                manifest = manifest_data.read().decode('utf-8')
+            try:
+                # new manifest location
+                with zip_file.open('meta') as manifest_data:
+                    manifest = manifest_data.read().decode('utf-8')
+            except KeyError:
+                # old manifest location
+                with zip_file.open('META-INF/MANIFEST.MF') as manifest_data:
+                    manifest = manifest_data.read().decode('utf-8')
         except KeyError:
             raise jamovi_exceptions.JamoviFileCorruptError(
-                '{} Missing META-INF/MANIFEST.MF'.format(self.MESSAGE_FILE_CORRUPT),
+                f'{self.MESSAGE_FILE_CORRUPT} Missing manifest',
                 extension=self.metadata.ext,
                 corruption_type='key_error',
-                reason='zip missing ./META-INF/MANIFEST.MF',
+                reason='zip missing manifest',
             )
 
         lines = manifest.split('\n')
@@ -87,7 +93,7 @@ class JamoviRenderer(extension.BaseRenderer):
                 break
         else:
             raise jamovi_exceptions.JamoviFileCorruptError(
-                '{} Data-Archive-Version not found.'.format(self.MESSAGE_FILE_CORRUPT),
+                f'{self.MESSAGE_FILE_CORRUPT} Data-Archive-Version not found.',
                 extension=self.metadata.ext,
                 corruption_type='manifest_parse_error',
                 reason='Data-Archive-Version not found.',
@@ -98,17 +104,17 @@ class JamoviRenderer(extension.BaseRenderer):
         try:
             if archive_version < self.MINIMUM_VERSION:
                 raise jamovi_exceptions.JamoviFileCorruptError(
-                    '{} Data-Archive-Version is too old.'.format(self.MESSAGE_FILE_CORRUPT),
+                    f'{self.MESSAGE_FILE_CORRUPT} Data-Archive-Version is too old.',
                     extension=self.metadata.ext,
                     corruption_type='manifest_parse_error',
                     reason='Data-Archive-Version not found.',
                 )
         except TypeError:
             raise jamovi_exceptions.JamoviFileCorruptError(
-                '{} Data-Archive-Version not parsable.'.format(self.MESSAGE_FILE_CORRUPT),
+                f'{self.MESSAGE_FILE_CORRUPT} Data-Archive-Version not parsable.',
                 extension=self.metadata.ext,
                 corruption_type='manifest_parse_error',
-                reason='Data-Archive-Version ({}) not parsable.'.format(version_str),
+                reason=f'Data-Archive-Version ({version_str}) not parsable.',
             )
 
         return True

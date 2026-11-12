@@ -15,8 +15,12 @@ def metadata():
                             'http://wb.osf.io/file/jamovi.omv?token=1337')
 
 @pytest.fixture
-def ok_path():
-    return os.path.join(BASE_PATH, 'ok.omv')
+def ok_new_manifest_path():
+    return os.path.join(BASE_PATH, 'ok-new-manifest.omv')
+
+@pytest.fixture
+def ok_old_manifest_path():
+    return os.path.join(BASE_PATH, 'ok-old-manifest.omv')
 
 @pytest.fixture
 def ok_with_image_path():
@@ -55,28 +59,33 @@ def assets_url():
     return 'http://mfr.osf.io/assets'
 
 @pytest.fixture
-def export_url():
-    return 'http://mfr.osf.io/export?url=' + url()
+def export_url(url):
+    return 'http://mfr.osf.io/export?url=' + url
 
 @pytest.fixture
 def extension():
     return '.omv'
 
 @pytest.fixture
-def renderer(metadata, ok_path, url, assets_url, export_url):
-    return JamoviRenderer(metadata, ok_path, url, assets_url, export_url)
+def renderer(metadata, ok_new_manifest_path, url, assets_url, export_url):
+    return JamoviRenderer(metadata, ok_new_manifest_path, url, assets_url, export_url)
 
 
 class TestCodeJamoviRenderer:
 
     def test_render_jamovi(self, renderer):
-        body = renderer.render()
+        body = renderer._render()
+        assert '<div style="word-wrap: break-word; overflow: auto;" class="mfrViewer">' in body
+
+    def test_render_jamovi_old_manifest(self, metadata, ok_old_manifest_path, url, assets_url, export_url):
+        renderer = JamoviRenderer(metadata, ok_old_manifest_path, url, assets_url, export_url)
+        body = renderer._render()
         assert '<div style="word-wrap: break-word; overflow: auto;" class="mfrViewer">' in body
 
     def test_render_jamovi_with_image(self, metadata, ok_with_image_path, url, assets_url,
                                       export_url):
         renderer = JamoviRenderer(metadata, ok_with_image_path, url, assets_url, export_url)
-        body = renderer.render()
+        body = renderer._render()
         assert '<div style="word-wrap: break-word; overflow: auto;" class="mfrViewer">' in body
         assert '<img src="data:image/png;base64,' in body
 
@@ -84,7 +93,7 @@ class TestCodeJamoviRenderer:
                                           export_url):
         try:
             renderer = JamoviRenderer(metadata, not_a_zip_file_path, url, assets_url, export_url)
-            renderer.render()
+            renderer._render()
         except RendererError:
             return
 
@@ -94,7 +103,7 @@ class TestCodeJamoviRenderer:
                                        export_url):
         try:
             renderer = JamoviRenderer(metadata, no_manifest_path, url, assets_url, export_url)
-            renderer.render()
+            renderer._render()
         except RendererError:
             return
 
@@ -106,7 +115,7 @@ class TestCodeJamoviRenderer:
         try:
             renderer = JamoviRenderer(metadata, no_archive_version_in_manifest_path, url,
                                       assets_url, export_url)
-            renderer.render()
+            renderer._render()
         except RendererError:
             return
 
@@ -117,7 +126,7 @@ class TestCodeJamoviRenderer:
         try:
             renderer = JamoviRenderer(metadata, archive_version_is_too_old_path, url, assets_url,
                                       export_url)
-            renderer.render()
+            renderer._render()
         except RendererError:
             return
 
@@ -127,7 +136,7 @@ class TestCodeJamoviRenderer:
                                          export_url):
         try:
             renderer = JamoviRenderer(metadata, no_index_html_path, url, assets_url, export_url)
-            renderer.render()
+            renderer._render()
         except RendererError:
             return
 
@@ -137,7 +146,7 @@ class TestCodeJamoviRenderer:
                                                      url, assets_url, export_url):
         renderer = JamoviRenderer(metadata, contains_malicious_script_path, url, assets_url,
                                   export_url)
-        body = renderer.render()
+        body = renderer._render()
 
         assert '<script>' not in body
         assert ' onclick="' not in body

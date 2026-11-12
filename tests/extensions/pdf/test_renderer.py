@@ -1,3 +1,5 @@
+import html
+
 import furl
 import pytest
 
@@ -61,10 +63,11 @@ def tif_renderer(tif_metadata, tif_file_path, tif_url, assets_url, export_url):
 class TestPdfRenderer:
 
     def test_render_pdf(self, renderer, metadata, assets_url):
-        body = renderer.render()
-        assert '<base href="{}/{}/web/" target="_blank">'.format(assets_url, 'pdf') in body
+        body = renderer._render()
+        assert f'<script src="{assets_url}/pdf/web/viewer.mjs" type="module"></script>' in body
+        assert f'data-mfr-assets="{assets_url}/pdf"' in body
         assert '<div id="viewer" class="pdfViewer"></div>' in body
-        assert 'DEFAULT_URL = \'{}\''.format(metadata.download_url) in body
+        assert f'data-mfr-url="{html.escape(metadata.download_url)}"' in body
 
     def test_render_pdf_with_single_quote_in_name(self, assets_url):
 
@@ -76,22 +79,24 @@ class TestPdfRenderer:
                                assets_url,
                                'http://mfr.osf.io/export?url=http://osf.io/file/te\'st.pdf')
 
-        body = renderer.render()
+        body = renderer._render()
 
-        assert '<base href="{}/{}/web/" target="_blank">'.format(assets_url, 'pdf') in body
+        assert f'<script src="{assets_url}/pdf/web/viewer.mjs" type="module"></script>' in body
+        assert f'data-mfr-assets="{assets_url}/pdf"' in body
         assert '<div id="viewer" class="pdfViewer"></div>' in body
-        assert 'DEFAULT_URL = \'{}\''.format(download_url) not in body
-        assert 'DEFAULT_URL = \'{}\''.format(safe_download_url) in body
+        assert f'data-mfr-url="{html.escape(download_url)}"' not in body
+        assert f'data-mfr-url="{html.escape(safe_download_url)}"' in body
 
     def test_render_tif(self, tif_renderer, assets_url):
         exported_url = furl.furl(tif_renderer.export_url)
         exported_url.args['format'] = '{}.{}'.format(settings.EXPORT_MAXIMUM_SIZE,
                                                      settings.EXPORT_TYPE)
 
-        body = tif_renderer.render()
-        assert '<base href="{}/{}/web/" target="_blank">'.format(assets_url, 'pdf') in body
+        body = tif_renderer._render()
+        assert f'<script src="{assets_url}/pdf/web/viewer.mjs" type="module"></script>' in body
+        assert f'data-mfr-assets="{assets_url}/pdf"' in body
         assert '<div id="viewer" class="pdfViewer"></div>' in body
-        assert 'DEFAULT_URL = \'{}\''.format(exported_url.url) in body
+        assert f'data-mfr-url="{html.escape(exported_url.url)}"' in body
 
     def test_render_docx(self, assets_url):
 
@@ -102,9 +107,10 @@ class TestPdfRenderer:
         renderer = PdfRenderer(metadata, '/tmp/te\'st.docx', export_url, assets_url,
                                'http://mfr.osf.io/export?url=http://osf.io/file/te\'st.docx')
 
-        body = renderer.render()
+        body = renderer._render()
 
-        assert '<base href="{}/{}/web/" target="_blank">'.format(assets_url, 'pdf') in body
+        assert f'<script src="{assets_url}/pdf/web/viewer.mjs" type="module"></script>' in body
+        assert f'data-mfr-assets="{assets_url}/pdf"' in body
         assert '<div id="viewer" class="pdfViewer"></div>' in body
-        assert 'DEFAULT_URL = \'{}\''.format(export_url) not in body
-        assert 'DEFAULT_URL = \'{}\''.format(safe_url) in body
+        assert f'data-mfr-url="{html.escape(export_url)}"' not in body
+        assert f'data-mfr-url="{html.escape(safe_url)}"' in body

@@ -22,6 +22,11 @@ CORS_ALLOW_ORIGIN = config.get('CORS_ALLOW_ORIGIN', '*')
 
 CHUNK_SIZE = int(config.get('CHUNK_SIZE', 65536))  # 64KB
 MAX_BUFFER_SIZE = int(config.get('MAX_BUFFER_SIZE', 1024 * 1024 * 100))  # 100MB
+# MFR answers GET requests only and never reads a request body, but tornado parses form
+# bodies (multipart, URL-encoded) before the handler's method is checked, so cap what a
+# request may carry instead of letting it fill the 100MB buffer.
+MAX_BODY_SIZE = int(config.get('MAX_BODY_SIZE', 64 * 1024))  # 64KB
+MAX_HEADER_SIZE = int(config.get('MAX_HEADER_SIZE', 32 * 1024))  # 32KB
 
 PROVIDER_NAME = config.get('PROVIDER_NAME', 'osf')
 
@@ -43,11 +48,15 @@ analytics_config = config.child('ANALYTICS')
 keen_config = analytics_config.child('KEEN')
 KEEN_API_BASE_URL = keen_config.get('API_BASE_URL', 'https://api.keen.io')
 KEEN_API_VERSION = keen_config.get('API_VERSION', '3.0')
+KEEN_ENABLE_LOGGING = keen_config.get_bool('ENABLE_LOGGING', True)
 
 keen_private_config = keen_config.child('PRIVATE')
 KEEN_PRIVATE_PROJECT_ID = keen_private_config.get_nullable('PROJECT_ID', None)
 KEEN_PRIVATE_WRITE_KEY = keen_private_config.get_nullable('WRITE_KEY', None)
+KEEN_PRIVATE_LOG_VIEWS = keen_private_config.get_bool('LOG_VIEWS', True)
+KEEN_PRIVATE_LOG_ERRORS = keen_private_config.get_bool('LOG_ERRORS', True)
 
 keen_public_config = keen_config.child('PUBLIC')
 KEEN_PUBLIC_PROJECT_ID = keen_public_config.get_nullable('PROJECT_ID', None)
 KEEN_PUBLIC_WRITE_KEY = keen_public_config.get_nullable('WRITE_KEY', None)
+KEEN_PUBLIC_LOG_VIEWS = keen_public_config.get_bool('LOG_VIEWS', True)
