@@ -1,0 +1,17 @@
+{
+  "name": "mfr-assets",
+  "private": true,
+  "description": "Browser-side libraries served by the MFR renderers; copied into the static directories by `invoke assets`",
+  "dependencies": {
+    "bootstrap": "3.4.1",
+    "jquery": "3.7.1",
+    "jquery-mousewheel": "3.1.13",
+    "pdfjs-dist": "6.5.438",
+    "slickgrid": "2.4.45"
+  },
+  "mfr": {
+    "pdfjsViewerArchive": {
+      "6.5.438": "55138aa33b5f1f6f68809895338b947f395f344eb6381d424b2420d6daa6a844"
+    }
+  }
+}

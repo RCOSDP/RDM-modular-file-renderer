@@ -1,0 +1,50 @@
+# Conversion server for the unoconv extension: LibreOffice driven by unoserver.
+# MFR talks to it over XML-RPC (UNOSERVER_EXTENSION_CONFIG_HOST / _PORT), so the
+# LibreOffice installation only has to live in this image.
+#
+# Ubuntu rather than Debian 13: Debian 13 ships LibreOffice against libxml2 2.9.14, whose
+# open CVEs cannot be fixed there (the fixed libxml2 2.15 changed ABI and only exists in
+# Debian testing), while Ubuntu 26.04 builds LibreOffice against libxml2-16 2.15 with the fixes.
+FROM ubuntu:26.04
+
+ENV UNOSERVER_HOME=/opt/unoserver
+
+RUN apt-get update \
+    # pick up security updates published after the base image was built
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
+        # headless LibreOffice modules used by the unoconv exporter formats
+        libreoffice-writer-nogui \
+        libreoffice-calc-nogui \
+        libreoffice-impress-nogui \
+        libreoffice-draw-nogui \
+        # TLS trust store for pip in the venv step below
+        ca-certificates \
+        # Python UNO bridge for the system python used by unoserver
+        python3-uno \
+        python3-venv \
+        # fonts: metric-compatible Latin fonts and CJK coverage for Japanese documents
+        fonts-liberation \
+        fonts-dejavu-core \
+        fonts-noto-cjk \
+    && apt-get clean \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/* \
+    # the Ubuntu base image ships the pebble service manager (a Go binary outside dpkg);
+    # nothing here uses it, so drop it rather than carry its Go runtime findings
+    && rm -f /usr/bin/pebble
+
+# unoserver has to run under the system python that ships the uno module, so
+# the virtualenv is created with access to the system site-packages
+RUN python3 -m venv --system-site-packages ${UNOSERVER_HOME} \
+    && ${UNOSERVER_HOME}/bin/pip install --no-cache-dir unoserver==3.3.2 \
+    && rm -rf ${UNOSERVER_HOME}/lib/python3*/site-packages/pip*
+
+# LibreOffice needs a writable profile directory for the user it runs as
+RUN useradd --create-home --home-dir /home/unoserver --shell /usr/sbin/nologin unoserver
+USER unoserver
+ENV HOME=/home/unoserver
+
+EXPOSE 2003
+
+CMD ["/opt/unoserver/bin/unoserver", "--interface", "0.0.0.0", "--port", "2003", "--uno-interface", "127.0.0.1", "--uno-port", "2002"]

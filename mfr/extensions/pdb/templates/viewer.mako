@@ -6,7 +6,7 @@
     window.pymChild.sendMessage('embed', 'embed-responsive-16by9');
 </script>
 
-<script src="/static/js/jquery-1.11.3.min.js"></script>
+<script src="/static/js/jquery.min.js"></script>
 <script src="${base}/js/gl-matrix.js"></script>
 <script src="${base}/js/core.js"></script>
 <script src="${base}/js/geom.js"></script>

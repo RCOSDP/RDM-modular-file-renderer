@@ -1,0 +1,51 @@
+import os
+
+from kombu import Queue, Exchange
+
+from mfr import settings
+
+
+config = settings.child('TASKS_CONFIG')
+
+WAIT_TIMEOUT = int(config.get('WAIT_TIMEOUT', 20))
+WAIT_INTERVAL = float(config.get('WAIT_INTERVAL', 0.5))
+ADHOC_BACKEND_PATH = config.get('ADHOC_BACKEND_PATH', '/tmp')
+
+broker_url = config.get(
+    'BROKER_URL',
+    'amqp://{}:{}//'.format(
+        os.environ.get('RABBITMQ_PORT_5672_TCP_ADDR', ''),
+        os.environ.get('RABBITMQ_PORT_5672_TCP_PORT', ''),
+    )
+)
+
+task_default_queue = config.get('CELERY_DEFAULT_QUEUE', 'mfr')
+task_queues = (
+    Queue('mfr', Exchange('mfr'), routing_key='mfr'),
+)
+
+task_always_eager = config.get_bool('CELERY_ALWAYS_EAGER', False)
+# One result queue per task, as the amqp backend of Celery 4 did. The rpc backend collects
+# the results of a client in one queue and polls it with basic_get; a result left there by an
+# earlier task is fetched as an out-of-band message and never acknowledged, so RabbitMQ closes
+# the channel after its consumer timeout and the next task call fails.
+DEFAULT_RESULT_BACKEND = 'celery_amqp_backend.AMQPBackend://'
+result_backend = config.get_nullable('CELERY_RESULT_BACKEND', DEFAULT_RESULT_BACKEND)
+result_persistent = config.get_bool('CELERY_RESULT_PERSISTENT', True)
+worker_disable_rate_limits = config.get_bool('CELERY_DISABLE_RATE_LIMITS', True)
+result_expires = int(config.get('CELERY_TASK_RESULT_EXPIRES', 60))
+task_create_missing_queues = config.get_bool('CELERY_CREATE_MISSING_QUEUES', False)
+task_acks_late = True
+worker_hijack_root_logger = False
+task_eager_propagates = True
+
+# Workers exchange remote control messages (including the hello/reply done at startup) on a
+# broadcast exchange shared by every Celery application on the broker. Other applications on
+# the same broker may serialize those messages with pickle, which this JSON-only worker rejects,
+# so keep MFR's control traffic on an exchange of its own.
+control_exchange = config.get('CELERY_CONTROL_EXCHANGE', 'mfr')
+
+imports = [
+    "mfr.tasks.export",
+    "mfr.tasks.render",
+]

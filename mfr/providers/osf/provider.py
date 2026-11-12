@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import hashlib
 import logging
@@ -6,12 +7,11 @@ from urllib.parse import urlparse
 import mimetypes
 
 import furl
-import aiohttp
-from aiohttp.errors import ContentEncodingError
 
 from waterbutler.core import streams
 
 from mfr.core import exceptions
+from mfr.core import utils
 from mfr.core import provider
 from mfr.core.utils import sizeof_fmt
 from mfr.providers.osf import settings
@@ -59,7 +59,8 @@ class OsfProvider(provider.BaseProvider):
         differently.
         """
         download_url = await self._fetch_download_url()
-        logger.debug('download_url::{}'.format(download_url))
+        logger.debug(f'download_url::{download_url}')
+        metadata = {}
         if '/file?' in download_url:
             # URL is for WaterButler v0 API
             # TODO Remove this when API v0 is officially deprecated
@@ -67,6 +68,7 @@ class OsfProvider(provider.BaseProvider):
             metadata_url = download_url.replace('/file?', '/data?', 1)
             metadata_response = await self._make_request('GET', metadata_url)
             metadata = await metadata_response.json()
+            await metadata_response.release()
         else:
             # URL is for WaterButler v1 API
             self.metrics.add('metadata.wb_api', 'v1')
@@ -82,7 +84,7 @@ class OsfProvider(provider.BaseProvider):
             if response_code != 200:
                 raise exceptions.MetadataError(
                     'Failed to fetch file metadata from WaterButler. Received response: ',
-                    'code {} {}'.format(str(response_code), str(response_reason)),
+                    f'code {str(response_code)} {str(response_reason)}',
                     metadata_url=download_url,
                     response=response_reason,
                     provider=self.NAME,
@@ -91,7 +93,7 @@ class OsfProvider(provider.BaseProvider):
 
             try:
                 metadata = {'data': json.loads(response_headers['x-waterbutler-metadata'])['attributes']}
-            except ContentEncodingError:
+            except Exception:
                 pass  # hack: aiohttp tries to unzip empty body when Content-Encoding is set
 
         self.metrics.add('metadata.raw', metadata)
@@ -127,7 +129,7 @@ class OsfProvider(provider.BaseProvider):
         unique_key = hashlib.sha256((meta['etag'] + cleaned_url.url).encode('utf-8')).hexdigest()
         stable_str = '/{}/{}{}'.format(meta['resource'], meta['provider'], meta['path'])
         stable_id = hashlib.sha256(stable_str.encode('utf-8')).hexdigest()
-        logger.debug('stable_identifier: str({}) hash({})'.format(stable_str, stable_id))
+        logger.debug(f'stable_identifier: str({stable_str}) hash({stable_id})')
 
         return provider.ProviderMetadata(name, ext, content_type, unique_key, download_url, stable_id)
 
@@ -139,7 +141,8 @@ class OsfProvider(provider.BaseProvider):
 
         if response.status >= 400:
             resp_text = await response.text()
-            logger.error('Unable to download file: ({}) {}'.format(response.status, resp_text))
+            await response.release()
+            logger.error(f'Unable to download file: ({response.status}) {resp_text}')
             raise exceptions.DownloadError(
                 'Unable to download the requested file, please try again later.',
                 download_url=download_url,
@@ -149,9 +152,13 @@ class OsfProvider(provider.BaseProvider):
 
         self.metrics.add('download.saw_redirect', False)
         if response.status in (302, 301):
+            location = response.headers['location']
             await response.release()
-            response = await aiohttp.request('GET', response.headers['location'])
             self.metrics.add('download.saw_redirect', True)
+            # Follow the redirect ourselves without the OSF credentials: the target is usually a
+            # signed storage URL that must receive neither the cookie nor the Authorization header.
+            # The response is kept open on purpose, the returned stream reads from it.
+            response = await utils.get_client_session().get(location)
 
         return streams.ResponseStreamReader(response)
 
@@ -168,11 +175,23 @@ class OsfProvider(provider.BaseProvider):
                 self.download_url = self.url
                 self.metrics.add('download_url.orig_type', 'wb_v1')
             else:
-                self.metrics.add('download_url.orig_type', 'osf')
+                normalized_url = None
+                if re.compile(r'^/[a-z0-9]{5}/[^/]*', re.IGNORECASE).match(path):
+                    # In the past the OSF would redirect urls of the form https://osf.io/<file_guid>/ to
+                    # https://osf.io/download/<file_guid>/. It no longer does this, so MFR must detect
+                    # such urls and manually prepend /download/ to the path.
+                    self.metrics.add('download_url.orig_type', 'osf-preangular')
+                    temp_url = furl.furl(self.url)
+                    temp_url.path.segments = ['download'] + temp_url.path.segments
+                    normalized_url = temp_url.url
+                else:
+                    self.metrics.add('download_url.orig_type', 'osf')
+                    normalized_url = self.url
+
                 # make request to osf, don't follow, store waterbutler download url
                 request = await self._make_request(
                     'GET',
-                    self.url,
+                    normalized_url,
                     allow_redirects=False,
                     headers={
                         'Content-Type': 'application/json'
@@ -180,11 +199,11 @@ class OsfProvider(provider.BaseProvider):
                 )
                 await request.release()
 
-                logger.debug('osf-download-resolver: request.status::{}'.format(request.status))
+                logger.debug(f'osf-download-resolver: request.status::{request.status}')
                 if request.status != 302:
                     raise exceptions.MetadataError(
                         request.reason,
-                        metadata_url=self.url,
+                        metadata_url=normalized_url,
                         provider=self.NAME,
                         code=request.status,
                     )
@@ -205,4 +224,4 @@ class OsfProvider(provider.BaseProvider):
         if self.authorization:
             kwargs.setdefault('headers', {})['Authorization'] = 'Bearer ' + self.token
 
-        return await aiohttp.request(method, url, *args, **kwargs)
+        return await utils.get_client_session().request(method, url, *args, **kwargs)

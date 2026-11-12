@@ -2,6 +2,71 @@
 ChangeLog
 *********
 
+26.2.1 (2026-10-19)
+===================
+- Update rst renderer to fix incorrect invocation. (thanks @Santoshkumarpuppala for the
+  report and @ihorsokhanexoft for the fix!)
+
+26.2.0 (2026-10-06)
+===================
+- Bump newrelic dep to sync with WaterButler.
+
+26.1.1 (2026-09-01)
+===================
+- Hotfix to add build_spec.yaml for OCI CI/CD.
+
+26.1.0 (2026-04-28)
+===================
+- Rewrite legacy OSF file urls to point to downloadable url.
+
+26.0.1 (2026-04-06)
+===================
+- Bump newerlic dep to work with celery.
+
+26.0.0 (2026-03-26)
+===================
+- Add newerlic support to MFR. (thanks, @antkryt!)
+- Fix datetime conversion issue in tabular renderer. (thanks, @antkryt!)
+- Fix searching/filterinf in tabular renderer. (thanks, @Vlad0n20!)
+- Fix ability to zoom/pan on images.
+- Improve error message for unrenderable spreadsheets.
+
+25.0.0 (2025-11-18)
+===================
+- Upgrade MFR and dependencies to python v3.13.
+- Allow render jobs to be backgrounded and cached.
+- Switch from unoconv to unoserver; upgrade LibreOffice used to convert office files to pdf.
+- Switch to pyproject.toml and poetry.
+
+24.0.0 (2024-01-02)
+===================
+- Fix: Install ca-certificates-java in Dockerfile to fix image build.
+- Fix: Support newer manifest locations for jamovi files (PR#369). (thanks, @jonathon-love!)
+- Fix: Support new manifest type and location for JASP-stats files. (thanks, @JorisGoosen and
+@RensDofferhoff!)
+
+23.1.0 (2023-04-17)
+===================
+- Fix: Improve support for special characters in tabular renderer sheet names.  (thanks, @aaxelb!)
+
+23.0.0 (2023-03-30)
+===================
+- Docs: Basic repository maintenance for 2023; update copyright dates and update COS jobs url.
+
+22.0.0 (2022-05-27)
+===================
+- Feature: Improve Hypothes.is annotations by allowing the parent frame to pass in its url when
+turning on the annotator.
+- Feature: Enable syntax highlighting for .boa files (https://boa.cs.iastate.edu/) and bump Pygments
+dep to 2.12.0.
+- Code: Upgrade MFR's Dockerfile to be based off python3.6 and Debian buster.  Remove manual gosu
+installation and fetch from apt-get instead.  python3.6 is now the only supported python version.
+- Code: Migrate CI from TravisCI to Github Actions.
+
+20.0.1 (2020-10-21)
+===================
+- Feature: Add flags to toggle logging of MFR events to specific Keen collections.
+
 20.0.0 (2020-07-01)
 ===================
 - Happy Canada Day, everyone!

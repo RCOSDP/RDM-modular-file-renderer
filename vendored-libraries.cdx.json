@@ -1,0 +1,125 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:c92c4d89-66f1-4250-981e-a32450f7d358",
+  "version": 2,
+  "metadata": {
+    "timestamp": "2026-11-10T15:00:00Z",
+    "component": {
+      "type": "application",
+      "bom-ref": "mfr",
+      "name": "mfr",
+      "description": "Browser-side libraries bundled in the MFR repository that are not installed from npm (see package.json for those, including PDF.js). Each entry records where the files live (mfr:path), where they came from and whether they were changed locally (mfr:modified, mfr:modification)."
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/jquery-zoom@1.7.20",
+      "name": "jquery-zoom",
+      "version": "1.7.20",
+      "description": "jQuery Zoom 1.7.20 by Jack Moore, used by the image renderer to magnify images.",
+      "purl": "pkg:npm/jquery-zoom@1.7.20",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/jackmoore/zoom"
+        }
+      ],
+      "properties": [
+        {
+          "name": "mfr:path",
+          "value": "mfr/extensions/image/static/js/jquery.zoom.js"
+        },
+        {
+          "name": "mfr:modified",
+          "value": "true"
+        },
+        {
+          "name": "mfr:modification",
+          "value": "Reformatted to the project code style, zooms further on mouse wheel, and gives the zoomed image a white background (see the file header)."
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/bio-pv@1.3.1",
+      "name": "bio-pv",
+      "version": "1.3.1",
+      "description": "pv (bio-pv), the WebGL protein viewer used by the pdb renderer. The files are the src/ directory of biasmv/pv at commit ac12d7173 (2014-12-01), whose package.json declares version 1.3.1; they are loaded individually instead of as the bundled build.",
+      "purl": "pkg:npm/bio-pv@1.3.1",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/biasmv/pv"
+        }
+      ],
+      "properties": [
+        {
+          "name": "mfr:path",
+          "value": "mfr/extensions/pdb/static/js/"
+        },
+        {
+          "name": "mfr:modified",
+          "value": "false"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/gl-matrix@2.2.0",
+      "name": "gl-matrix",
+      "version": "2.2.0",
+      "description": "gl-matrix 2.2.0 as bundled with pv: the build shipped in the src/ directory of biasmv/pv, which omits vec2 and adds mat4.fromValues relative to the npm release.",
+      "purl": "pkg:npm/gl-matrix@2.2.0",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/toji/gl-matrix"
+        }
+      ],
+      "properties": [
+        {
+          "name": "mfr:path",
+          "value": "mfr/extensions/pdb/static/js/gl-matrix.js"
+        },
+        {
+          "name": "mfr:modified",
+          "value": "true"
+        },
+        {
+          "name": "mfr:modification",
+          "value": "Custom build distributed by pv, not the npm release file."
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:github/humu2009/jsc3d@1.5.0",
+      "name": "jsc3d",
+      "version": "1.5.0",
+      "description": "JSC3D 1.5.0, the 3D mesh viewer used by the jsc3d renderer (STL, OBJ, 3DS, CTM, STEP). The npm package of the same name is an unrelated Node.js port, hence the GitHub purl.",
+      "purl": "pkg:github/humu2009/jsc3d@1.5.0",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/humu2009/jsc3d"
+        }
+      ],
+      "properties": [
+        {
+          "name": "mfr:path",
+          "value": "mfr/extensions/jsc3d/static/js/"
+        },
+        {
+          "name": "mfr:modified",
+          "value": "true"
+        },
+        {
+          "name": "mfr:modification",
+          "value": "Zoom limits, CTM loader URL handling, IE compatibility and messaging adapted to the MFR embedding (2015-2017); jsc3d.touch.js is unchanged."
+        }
+      ]
+    }
+  ]
+}
